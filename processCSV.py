@@ -235,29 +235,6 @@ def generate_extended_info(input_file, output_file, origin = 'SAP_ODATA_IMPORT')
 
 
                 ## FLOATS
-                # campana_usuario[O_SCORE_MARCA] = 0
-                # campana_usuario[O_SCORE_CATEGORIA] = 0
-                # campana_usuario[O_SCORE_TOP] = 0
-                # campana_usuario[O_SCORE_LANZAMIENTO] = 0
-                # campana_usuario[O_SCORE_VISITAS] = 0
-                # campana_usuario[O_SCORE_TIP_GESTION_DIGITAL] = 0
-                # campana_usuario[O_SCORE_TIP_COBRANZA] = 0
-                # campana_usuario[O_SCORE_MAS_CLIENTES] = 0
-                # campana_usuario[O_SCORE_TIP_PEDIDO_ONLINE] = 0
-                # campana_usuario[O_PROBABILIDAD_FUGA] = 0
-
-                # PRUEBA
-                # campana_usuario[O_SCORE_MARCA] = format_text(row[I_SCORE_MARCA])
-                # campana_usuario[O_SCORE_CATEGORIA] = format_text(row[I_SCORE_CATEGORIA])
-                # campana_usuario[O_SCORE_TOP] = format_text(row[I_SCORE_TOP])
-                # campana_usuario[O_SCORE_LANZAMIENTO] = format_text(row[I_SCORE_LANZAMIENTO])
-                # campana_usuario[O_SCORE_VISITAS] = format_text(row[I_SCORE_VISITAS])
-                # campana_usuario[O_SCORE_TIP_GESTION_DIGITAL] = format_text(row[I_SCORE_TIP_GESTION_DIGITAL])
-                # campana_usuario[O_SCORE_TIP_COBRANZA] = format_text(row[I_SCORE_TIP_COBRANZA])
-                # campana_usuario[O_SCORE_MAS_CLIENTES] = format_text(row[I_SCORE_MAS_CLIENTES])
-                # campana_usuario[O_SCORE_TIP_PEDIDO_ONLINE] = format_text(row[I_SCORE_TIP_PEDIDO_ONLINE])
-                # campana_usuario[O_PROBABILIDAD_FUGA] = format_text(row[I_PROBABILIDAD_FUGA])
-
                 campana_usuario[O_SCORE_MARCA] = format_float(I_SCORE_MARCA, row)
                 campana_usuario[O_SCORE_CATEGORIA] = format_float(I_SCORE_CATEGORIA, row)
                 campana_usuario[O_SCORE_TOP] = format_float(I_SCORE_TOP, row)
@@ -375,6 +352,8 @@ def generate_contact(input_file, output_file, origin = 'SAP_ODATA_IMPORT'):
                 # contact[O_SMTP_ADDR] = row[I_CORREO_ELECTRONICO]
                 contact[O_SMTP_ADDR] = 'brunoo.gonzalez+{}@gmail.com'.format(read_counter+1)
                 contact[O_DATE_OF_BIRTH] = format_date(I_FECHA_NACIMIENTO,row)
+                contact[O_CODIGOEBELISTA] = int(row[I_COD_EBELISTA])
+                contact[O_DOCIDENTIDAD] = format_text(row[I_DOC_IDENTIDAD])
                 contact[O_ID_ORIGIN] = origin
                 for key in O_FIELDS_CONTACT:
                     if key not in contact.keys():
@@ -398,9 +377,9 @@ def generate_contact(input_file, output_file, origin = 'SAP_ODATA_IMPORT'):
 
 
 # MAIN
-SOURCE_FOLDER = '/Users/bruno/Downloads/IDATHA/Belcorp/ETL'
-SOURCE_FILE = 'test.csv'
-OUTPUT_FOLDER =  '/Users/bruno/Downloads/IDATHA/Belcorp/ETL'
+SOURCE_FOLDER = 'C:\IDATHA\PYXIS\BELCORP - Hybris Marketing\Datos\Recibidos\Sprint 3'
+SOURCE_FILE = 'Estructura_Data_20180131.csv'
+OUTPUT_FOLDER =  'C:\IDATHA\PYXIS\BELCORP - Hybris Marketing\Datos\Transformados\Sprint 4'
 
 generate_extended_info ('{}/{}'.format(SOURCE_FOLDER, SOURCE_FILE),
                         '{}/CAMPANAS_CONSULTORAS_{}'.format(OUTPUT_FOLDER, SOURCE_FILE))
