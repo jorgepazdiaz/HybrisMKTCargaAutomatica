@@ -132,8 +132,8 @@ def generate_extended_info(input_file, output_file, origin = 'SAP_ODATA_IMPORT')
                     raise Exception(msg)
 
                 campana_usuario[O_DESC_CONSTANCIA_NUEVAS] = row[I_DESC_CONSTANCIA_NUEVAS]
-                if campana_usuario[O_DESC_CONSTANCIA_NUEVAS] == '0':
-                    campana_usuario[O_DESC_CONSTANCIA_NUEVAS] = ''
+                # if campana_usuario[O_DESC_CONSTANCIA_NUEVAS] == '0':
+                #     campana_usuario[O_DESC_CONSTANCIA_NUEVAS] = ''
                 if campana_usuario[O_DESC_CONSTANCIA_NUEVAS] != '' and \
                                 campana_usuario[O_DESC_CONSTANCIA_NUEVAS] not in D_CONSTANCIA_NUEVAS:
                     msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid domain for row {}'.format(O_DESC_CONSTANCIA_NUEVAS,
@@ -219,10 +219,6 @@ def generate_extended_info(input_file, output_file, origin = 'SAP_ODATA_IMPORT')
                 ## TEXTS
                 campana_usuario[O_CUC_LANZAMIENTO] = format_text(row[I_CUC_LANZAMIENTO])
                 campana_usuario[O_CUC_TOP] = format_text(row[I_CUC_TOP])
-                campana_usuario[O_LINK_INVITACION_SMS_FICHA] = format_text(row[I_INVITACION_SMS_FICHA])
-                campana_usuario[O_LINK_INVITACION_SMS_LANDING] = format_text(row[I_INVITACION_SMS_LANDING])
-                campana_usuario[O_LINK_INVITACION_EMAIL_FICHA] = format_text(row[I_INVITACION_EMAIL_FICHA])
-                campana_usuario[O_LINK_INVITACION_EMAIL_LANDING] = format_text(row[I_INVITACION_EMAIL_LANDING])
                 campana_usuario[O_DESC_LANZAMIENTO] = format_text(row[I_DESC_LANZAMIENTO])
                 campana_usuario[O_LINK_LANZAMIENTO] = format_text(row[I_LINK_LANZAMIENTO])
                 campana_usuario[O_DESC_TOP] = format_text(row[I_DESC_TOP])
@@ -235,14 +231,14 @@ def generate_extended_info(input_file, output_file, origin = 'SAP_ODATA_IMPORT')
 
 
                 ## FLOATS
-                campana_usuario[O_SCORE_MARCA] = format_float(I_SCORE_MARCA, row)
-                campana_usuario[O_SCORE_CATEGORIA] = format_float(I_SCORE_CATEGORIA, row)
-                campana_usuario[O_SCORE_TOP] = format_float(I_SCORE_TOP, row)
-                campana_usuario[O_SCORE_LANZAMIENTO] = format_float(I_SCORE_LANZAMIENTO, row)
-                campana_usuario[O_SCORE_VISITAS] = format_float(I_SCORE_VISITAS, row)
-                campana_usuario[O_SCORE_TIP_GESTION_DIGITAL] = format_float(I_SCORE_TIP_GESTION_DIGITAL, row)
-                campana_usuario[O_SCORE_TIP_COBRANZA] = format_float(I_SCORE_TIP_COBRANZA, row)
-                campana_usuario[O_SCORE_MAS_CLIENTES] = format_float(I_SCORE_MAS_CLIENTES, row)
+                campana_usuario[O_SCORE_MARCA] = format_float(I_SCORE_MARCA, row, min=0.0, max=1.0)
+                campana_usuario[O_SCORE_CATEGORIA] = format_float(I_SCORE_CATEGORIA, row, min=0.0, max=1.0)
+                campana_usuario[O_SCORE_TOP] = format_float(I_SCORE_TOP, row, min=0.0, max=1.0)
+                campana_usuario[O_SCORE_LANZAMIENTO] = format_float(I_SCORE_LANZAMIENTO, row, min=0.0, max=1.0)
+                campana_usuario[O_SCORE_VISITAS] = format_float(I_SCORE_VISITAS, row, min=0.0, max=1.0)
+                campana_usuario[O_SCORE_TIP_GESTION_DIGITAL] = format_float(I_SCORE_TIP_GESTION_DIGITAL, row, min=0.0, max=1.0)
+                campana_usuario[O_SCORE_TIP_COBRANZA] = format_float(I_SCORE_TIP_COBRANZA, row, min=0.0, max=1.0)
+                campana_usuario[O_SCORE_MAS_CLIENTES] = format_float(I_SCORE_MAS_CLIENTES, row, min=0.0, max=1.0)
                 campana_usuario[O_SCORE_TIP_PEDIDO_ONLINE] = format_float(I_SCORE_TIP_PEDIDO_ONLINE, row)
                 campana_usuario[O_PROBABILIDAD_FUGA] = format_float(I_PROBABILIDAD_FUGA, row, min=0.0, max=100.0)
                 campana_usuario[O_VTA_FACTURADA_UC] = format_float(I_VTA_FACTURADA_UC, row)
@@ -271,10 +267,10 @@ def generate_extended_info(input_file, output_file, origin = 'SAP_ODATA_IMPORT')
                                                                                                      row[O_NRO_CAMPANA_PROCESO],
                                                                                                      row.items())
                     raise Exception(msg)
-                campana_usuario[O_NRO_CAMPANA_NUEVAS] = format_int(I_NRO_CAMPANA_NUEVAS, row, range(0, 8))
-                campana_usuario[O_NRO_PEDIDOS_NUEVAS] = format_int(I_NRO_PEDIDOS_NUEVAS, row, range(0, 8))
-                campana_usuario[O_IP_UNICO_PU5C] = format_int(I_IP_UNICO_PU5C, row, range(0, 19))
-                campana_usuario[O_OFERTA_DIGITAL_PU5C] = format_int(I_OFERTA_DIGITAL_PU5C, row, range(0, 19))
+                campana_usuario[O_NRO_CAMPANA_NUEVAS] = format_int(I_NRO_CAMPANA_NUEVAS, row, range(0, 7))
+                campana_usuario[O_NRO_PEDIDOS_NUEVAS] = format_int(I_NRO_PEDIDOS_NUEVAS, row, range(0, 7))
+                campana_usuario[O_IP_UNICO_PU5C] = format_int(I_IP_UNICO_PU5C, row, range(0, 6))
+                campana_usuario[O_OFERTA_DIGITAL_PU5C] = format_int(I_OFERTA_DIGITAL_PU5C, row, range(0, 7))
                 campana_usuario[O_MONTO_DEUDA] = int(row[I_MONTO_DEUDA])
                 campana_usuario[O_MAX_VTA_FACTURADA_PU5C] = int(float(row[I_MAX_VTA_FACTURADA_PU5C]))
 
@@ -309,7 +305,7 @@ def generate_extended_info(input_file, output_file, origin = 'SAP_ODATA_IMPORT')
         print('Lines read: {}'.format(read_counter))
         print('Output fields: {}'.format(O_FIELDS_USU_CAMP))
         write_counter = 0
-        batch_size = 9000
+        batch_size = BATCH_SIZE
         max_files = math.ceil(len(to_write.values()) / batch_size)
         to_write_values = list(to_write.values())
         for file_number in range(max_files):
@@ -349,8 +345,11 @@ def generate_contact(input_file, output_file, origin = 'SAP_ODATA_IMPORT'):
                 contact[O_NAME_FIRST] = format_text(row[I_PRIMER_NOMBRE])
                 contact[O_NAME_LAST] = format_text(row[I_APE_PATERNO])
                 contact[O_COUNTRY_FT] = format_text(row[I_DESC_PAIS])
-                # contact[O_SMTP_ADDR] = row[I_CORREO_ELECTRONICO]
-                contact[O_SMTP_ADDR] = 'brunoo.gonzalez+{}@gmail.com'.format(read_counter+1)
+                if MODE == 'PRODUCTIVE':
+                    contact[O_SMTP_ADDR] = row[I_CORREO_ELECTRONICO]
+                    contact[O_TELNR_MOBILE] = row[I_TEL_MOVIL]
+                else:
+                    contact[O_SMTP_ADDR] = 'brunoo.gonzalez+{}@gmail.com'.format(read_counter+1)
                 contact[O_DATE_OF_BIRTH] = format_date(I_FECHA_NACIMIENTO,row)
                 contact[O_CODIGOEBELISTA] = int(row[I_COD_EBELISTA])
                 contact[O_DOCIDENTIDAD] = format_text(row[I_DOC_IDENTIDAD])
@@ -373,13 +372,6 @@ def generate_contact(input_file, output_file, origin = 'SAP_ODATA_IMPORT'):
                     writer.writerow(item)
                     write_counter += 1
             print('Lines written: {}'.format(write_counter))
-
-
-
-# MAIN
-SOURCE_FOLDER = 'C:\IDATHA\PYXIS\BELCORP - Hybris Marketing\Datos\Recibidos\Sprint 3'
-SOURCE_FILE = 'Estructura_Data_20180131.csv'
-OUTPUT_FOLDER =  'C:\IDATHA\PYXIS\BELCORP - Hybris Marketing\Datos\Transformados\Sprint 4'
 
 generate_extended_info ('{}/{}'.format(SOURCE_FOLDER, SOURCE_FILE),
                         '{}/CAMPANAS_CONSULTORAS_{}'.format(OUTPUT_FOLDER, SOURCE_FILE))
