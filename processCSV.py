@@ -4,6 +4,7 @@ import math
 import decimal
 from datetime import datetime
 from settings import *
+import re
 
 
 def format_date(attribute, row):
@@ -43,6 +44,11 @@ def format_int(attribute, row, range):
     else:
         return int_number
 
+def format_phone(text_string):
+    if text_string != '':
+        return '+' + text_string
+    else:
+        return text_string
 
 def generate_extended_info(input_file, output_file, origin = 'SAP_ODATA_IMPORT'):
     to_write = {}
@@ -68,7 +74,7 @@ def generate_extended_info(input_file, output_file, origin = 'SAP_ODATA_IMPORT')
                                                                                                      row.items())
                     raise Exception(msg)
                 campana_usuario[O_COD_REGION] = row[I_COD_REGION]
-                if len(str(campana_usuario[O_COD_REGION])) != 3:
+                if len(str(campana_usuario[O_COD_REGION])) > 3:
                     msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid domain for row {}'.format(O_COD_REGION,
                                                                                                      campana_usuario[
                                                                                                          O_COD_REGION],
@@ -328,8 +334,9 @@ def generate_extended_info(input_file, output_file, origin = 'SAP_ODATA_IMPORT')
 
 
 def generate_contact(input_file, output_file, origin = 'SAP_ODATA_IMPORT'):
-    # try:
+    try:
         to_write = {}
+        to_discard = {}
         print('Processing input file: {}'.format(input_file))
         print('Required fields: {}'.format(I_FIELDS_CONTACT))
         read_counter = 0
@@ -347,7 +354,7 @@ def generate_contact(input_file, output_file, origin = 'SAP_ODATA_IMPORT'):
                 contact[O_COUNTRY_FT] = format_text(row[I_DESC_PAIS])
                 if MODE == 'PRODUCTIVE':
                     contact[O_SMTP_ADDR] = row[I_CORREO_ELECTRONICO]
-                    contact[O_TELNR_MOBILE] = row[I_TEL_MOVIL]
+                    contact[O_TELNR_MOBILE] = format_phone(row[I_TEL_MOVIL])
                 else:
                     contact[O_SMTP_ADDR] = 'brunoo.gonzalez+{}@gmail.com'.format(read_counter+1)
                 contact[O_DATE_OF_BIRTH] = format_date(I_FECHA_NACIMIENTO,row)
@@ -357,23 +364,136 @@ def generate_contact(input_file, output_file, origin = 'SAP_ODATA_IMPORT'):
                 for key in O_FIELDS_CONTACT:
                     if key not in contact.keys():
                         contact[key] = ''
-                to_write[contact[O_ID]] = contact
+                match_phone = re.search(PHONE_REGEX, contact[O_TELNR_MOBILE])
+                match_mail = re.search(MAIL_REGEX, contact[O_SMTP_ADDR])
+                if (match_phone or contact[O_TELNR_MOBILE] == '') and \
+                        (match_mail or contact[O_SMTP_ADDR] == ''):
+                    to_write[contact[O_ID]] = contact
+                else:
+                    to_discard[contact[O_ID]] = contact
                 read_counter += 1
 
             print('Lines read: {}'.format(read_counter))
             print('Processing output file: {}'.format(output_file))
             print('Output fields: {}'.format(O_FIELDS_CONTACT))
+
             write_counter = 0
-            with open(output_file, 'w') as ofile:
+            batch_size = BATCH_SIZE
+            max_files = math.ceil(len(to_write.values()) / batch_size)
+            to_write_values = list(to_write.values())
+            for file_number in range(max_files):
+                parcial_output_file = output_file.replace('.csv', '_{}.csv'.format(file_number))
+                print('Processing output file: {}'.format(parcial_output_file))
+                with open(parcial_output_file, 'w') as ofile:
+                    ofile.write(O_CONTACT_FILE_HEADER)
+                    writer = csv.DictWriter(ofile, fieldnames=O_FIELDS_CONTACT, lineterminator='\n', delimiter=';')
+                    writer.writeheader()
+                    ini_index = file_number * batch_size
+                    end_index = min((file_number + 1) * batch_size, len(to_write_values))
+                    for item in to_write_values[ini_index:end_index]:
+                        writer.writerow(item)
+                        write_counter += 1
+            print('Lines written: {}'.format(write_counter))
+
+            discard_counter = 0
+            with open(output_file.replace('.csv', '_DISCARDED.csv') , 'w') as ofile:
                 ofile.write(O_CONTACT_FILE_HEADER)
                 writer = csv.DictWriter(ofile, fieldnames=O_FIELDS_CONTACT, lineterminator='\n', delimiter=';')
                 writer.writeheader()
-                for item in to_write.values():
+                for item in to_discard.values():
                     writer.writerow(item)
-                    write_counter += 1
+                    discard_counter += 1
+            print('Lines discarded: {}'.format(discard_counter))
+    except ValueError as ve:
+        print(ve)
+        print(row)
+        raise
+
+
+def generate_interaction(input_file, output_file):
+    try:
+        to_write = {}
+        to_discard = {}
+        print('Processing input file: {}'.format(input_file))
+        print('Required fields: {}'.format(I_FIELDS_INTERACT))
+        read_counter = 0
+        with open(input_file, 'r') as input_file:
+            reader = csv.DictReader(input_file, delimiter=';')
+            for row in reader:
+                interaction = {}
+                for key in I_FIELDS_INTERACT:
+                    if key not in row.keys():
+                        msg = 'INPUT ERROR - Attribute "{}" is not included in the input file for row {}'.format(key, row.items())
+                        raise Exception(msg)
+                if row[I_TEL_MOVIL] != '':
+                    interaction[O_ID_ORIGIN] = 'MOBILE_APP_TOKEN'
+                    interaction[O_ID] = format_text(row[I_APP_TOKEN])
+                    interaction[O_COMM_MEDIUM] = 'MOBILE_APP'
+                    interaction[O_IA_TYPE] = 'MOB_APP_INSTALLED'
+                    # Timestamp without timezone
+                    interaction[O_TIMESTAMP] = datetime.strftime(datetime.utcnow(), '%Y%m%d%H%M%S')
+                    interaction[O_DEVICE_TYPE] = 'PHONE'
+                    interaction[O_NAME_FIRST] = format_text(row[I_PRIMER_NOMBRE])
+                    interaction[O_NAME_LAST] = format_text(row[I_APE_PATERNO])
+                    interaction[O_TELNR_MOBILE] = format_phone(row[I_TEL_MOVIL])
+                    for key in O_FIELDS_INTERACTION:
+                        if key not in interaction.keys():
+                            interaction[key] = ''
+
+                    match_phone = re.search(PHONE_REGEX, interaction[O_TELNR_MOBILE])
+                    if match_phone:
+                        to_write[str(interaction[O_NAME_FIRST]) + '_' +
+                                 str(interaction[O_NAME_LAST]) + '_' +
+                                 str(interaction[O_TELNR_MOBILE])] = interaction
+                    else:
+                        to_discard[str(interaction[O_NAME_FIRST]) + '_' +
+                                   str(interaction[O_NAME_LAST]) + '_' +
+                                   str(interaction[O_TELNR_MOBILE])] = interaction
+
+                read_counter += 1
+
+            print('Lines read: {}'.format(read_counter))
+            print('Processing output file: {}'.format(output_file))
+            print('Output fields: {}'.format(O_FIELDS_INTERACTION))
+
+            write_counter = 0
+            if MODE == 'PRODUCTIVE':
+                batch_size = BATCH_SIZE
+                max_files = math.ceil(len(to_write.values()) / batch_size)
+                to_write_values = list(to_write.values())
+                for file_number in range(max_files):
+                    parcial_output_file = output_file.replace('.csv', '_{}.csv'.format(file_number))
+                    print('Processing output file: {}'.format(parcial_output_file))
+                    with open(parcial_output_file, 'w') as ofile:
+                        ofile.write(O_INTERACTION_FILE_HEADER)
+                        writer = csv.DictWriter(ofile, fieldnames=O_FIELDS_INTERACTION, lineterminator='\n', delimiter=';')
+                        writer.writeheader()
+                        ini_index = file_number * batch_size
+                        end_index = min((file_number + 1) * batch_size, len(to_write_values))
+                        for item in to_write_values[ini_index:end_index]:
+                            writer.writerow(item)
+                            write_counter += 1
             print('Lines written: {}'.format(write_counter))
 
-generate_extended_info ('{}/{}'.format(SOURCE_FOLDER, SOURCE_FILE),
-                        '{}/CAMPANAS_CONSULTORAS_{}'.format(OUTPUT_FOLDER, SOURCE_FILE))
-generate_contact ('{}/{}'.format(SOURCE_FOLDER, SOURCE_FILE),
-                  '{}/CONTACTS_{}'.format(OUTPUT_FOLDER, SOURCE_FILE))
+            discard_counter = 0
+            if MODE == 'PRODUCTIVE':
+                with open(output_file.replace('.csv', '_DISCARDED.csv') , 'w') as ofile:
+                    ofile.write(O_INTERACTION_FILE_HEADER)
+                    writer = csv.DictWriter(ofile, fieldnames=O_FIELDS_INTERACTION, lineterminator='\n', delimiter=';')
+                    writer.writeheader()
+                    for item in to_discard.values():
+                        writer.writerow(item)
+                        discard_counter += 1
+            print('Lines discarded: {}'.format(discard_counter))
+    except ValueError as ve:
+        print(ve)
+        print(row)
+        raise
+
+
+generate_extended_info('{}/{}'.format(SOURCE_FOLDER, SOURCE_FILE),
+                       '{}/CAMPANAS_CONSULTORAS_{}'.format(OUTPUT_FOLDER, SOURCE_FILE))
+generate_contact('{}/{}'.format(SOURCE_FOLDER, SOURCE_FILE),
+                 '{}/CONTACTS_{}'.format(OUTPUT_FOLDER, SOURCE_FILE))
+generate_interaction('{}/{}'.format(SOURCE_FOLDER, SOURCE_FILE),
+                     '{}/INTERACTIONS_{}'.format(OUTPUT_FOLDER, SOURCE_FILE))
