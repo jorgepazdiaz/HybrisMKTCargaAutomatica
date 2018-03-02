@@ -5,6 +5,11 @@ import decimal
 from datetime import datetime
 from settings import *
 import re
+import requests
+from requests.auth import HTTPBasicAuth
+import json
+import time
+import settings
 
 
 def format_date(attribute, row):
@@ -12,7 +17,8 @@ def format_date(attribute, row):
         date = datetime.strftime(datetime.strptime(row[attribute], '%d/%m/%Y'), '%Y%m%d')
         return date
     except ValueError:
-        msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid for row {}'.format(attribute, row[attribute], row.items())
+        msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid for row {}'.format(attribute, row[attribute],
+                                                                                  row.items())
         raise Exception(msg)
 
 
@@ -28,7 +34,8 @@ def format_float(attribute, row, min=None, max=None):
         else:
             return '{:.10f}'.format(float_number)
     except ValueError:
-        msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid for row {}'.format(attribute, row[attribute], row.items())
+        msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid for row {}'.format(attribute, row[attribute],
+                                                                                  row.items())
         raise Exception(msg)
 
 
@@ -39,10 +46,12 @@ def format_text(text_string):
 def format_int(attribute, row, range):
     int_number = int(row[attribute])
     if int_number not in range:
-        msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid domain for row {}'.format(attribute, row[attribute], row.items())
+        msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid domain for row {}'.format(attribute, row[attribute],
+                                                                                         row.items())
         raise Exception(msg)
     else:
         return int_number
+
 
 def format_phone(text_string):
     if text_string != '':
@@ -50,7 +59,8 @@ def format_phone(text_string):
     else:
         return text_string
 
-def generate_extended_info(input_file, output_file, origin = 'SAP_ODATA_IMPORT'):
+
+def generate_extended_info(input_file, output_file, origin='SAP_ODATA_IMPORT'):
     to_write = {}
     print('Processing input file: {}'.format(input_file))
     print('Required fields: {}'.format(I_FIELDS_USU_CAMP))
@@ -70,7 +80,8 @@ def generate_extended_info(input_file, output_file, origin = 'SAP_ODATA_IMPORT')
                 campana_usuario[O_COD_PAIS] = row[I_COD_PAIS]
                 if len(campana_usuario[O_COD_PAIS]) != 2:
                     msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid domain for row {}'.format(O_COD_PAIS,
-                                                                                                     campana_usuario[O_COD_PAIS],
+                                                                                                     campana_usuario[
+                                                                                                         O_COD_PAIS],
                                                                                                      row.items())
                     raise Exception(msg)
                 campana_usuario[O_COD_REGION] = row[I_COD_REGION]
@@ -104,10 +115,11 @@ def generate_extended_info(input_file, output_file, origin = 'SAP_ODATA_IMPORT')
 
                 campana_usuario[O_COD_COMPORTAMIENTO] = int(row[I_COD_COMPORTAMIENTO])
                 if campana_usuario[O_COD_COMPORTAMIENTO] not in range(0, 8):
-                    msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid domain for row {}'.format(O_COD_COMPORTAMIENTO,
-                                                                                                     campana_usuario[
-                                                                                                         O_COD_COMPORTAMIENTO],
-                                                                                                     row.items())
+                    msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid domain for row {}'.format(
+                        O_COD_COMPORTAMIENTO,
+                        campana_usuario[
+                            O_COD_COMPORTAMIENTO],
+                        row.items())
                     raise Exception(msg)
 
                 campana_usuario[O_DESC_SEGMENTO] = row[I_DESC_SEGMENTO]
@@ -142,19 +154,21 @@ def generate_extended_info(input_file, output_file, origin = 'SAP_ODATA_IMPORT')
                 #     campana_usuario[O_DESC_CONSTANCIA_NUEVAS] = ''
                 if campana_usuario[O_DESC_CONSTANCIA_NUEVAS] != '' and \
                                 campana_usuario[O_DESC_CONSTANCIA_NUEVAS] not in D_CONSTANCIA_NUEVAS:
-                    msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid domain for row {}'.format(O_DESC_CONSTANCIA_NUEVAS,
-                                                                                                     campana_usuario[
-                                                                                                         O_DESC_CONSTANCIA_NUEVAS],
-                                                                                                     row.items())
+                    msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid domain for row {}'.format(
+                        O_DESC_CONSTANCIA_NUEVAS,
+                        campana_usuario[
+                            O_DESC_CONSTANCIA_NUEVAS],
+                        row.items())
                     raise Exception(msg)
 
                 campana_usuario[O_MARCA_LANZAMIENTO] = format_text(row[I_MARCA_LANZAMIENTO])
                 if campana_usuario[O_MARCA_LANZAMIENTO] != '' and \
                                 campana_usuario[O_MARCA_LANZAMIENTO] not in D_MARCAS:
-                    msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid domain for row {}'.format(O_MARCA_LANZAMIENTO,
-                                                                                                     campana_usuario[
-                                                                                                         O_MARCA_LANZAMIENTO],
-                                                                                                     row.items())
+                    msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid domain for row {}'.format(
+                        O_MARCA_LANZAMIENTO,
+                        campana_usuario[
+                            O_MARCA_LANZAMIENTO],
+                        row.items())
                     raise Exception(msg)
 
                 campana_usuario[O_MARCA_TOP] = format_text(row[I_MARCA_TOP])
@@ -186,10 +200,11 @@ def generate_extended_info(input_file, output_file, origin = 'SAP_ODATA_IMPORT')
 
                 campana_usuario[O_COD_VTA_LANZAMIENTO] = format_text(row[I_COD_VTA_LANZAMIENTO])
                 if len(campana_usuario[O_COD_VTA_LANZAMIENTO]) not in range(0, 6):
-                    msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid domain for row {}'.format(O_COD_VTA_LANZAMIENTO,
-                                                                                                     campana_usuario[
-                                                                                                         O_COD_VTA_LANZAMIENTO],
-                                                                                                     row.items())
+                    msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid domain for row {}'.format(
+                        O_COD_VTA_LANZAMIENTO,
+                        campana_usuario[
+                            O_COD_VTA_LANZAMIENTO],
+                        row.items())
                     raise Exception(msg)
 
                 campana_usuario[O_COD_VTA_TOP] = format_text(row[I_COD_VTA_TOP])
@@ -203,7 +218,7 @@ def generate_extended_info(input_file, output_file, origin = 'SAP_ODATA_IMPORT')
                 campana_usuario[O_DESC_MARCA_SCORE] = format_text(row[I_DESC_MARCA_SCORE])
                 if campana_usuario[O_DESC_MARCA_SCORE] == '0':
                     campana_usuario[O_DESC_MARCA_SCORE] = ''
-                if campana_usuario[O_DESC_MARCA_SCORE] != '' and\
+                if campana_usuario[O_DESC_MARCA_SCORE] != '' and \
                                 campana_usuario[O_DESC_MARCA_SCORE] not in D_MARCAS:
                     msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid domain for row {}'.format(O_DESC_MARCA_SCORE,
                                                                                                      campana_usuario[
@@ -235,14 +250,14 @@ def generate_extended_info(input_file, output_file, origin = 'SAP_ODATA_IMPORT')
                 campana_usuario[O_INVITACION_EMAIL_LANDING] = format_text(row[I_INVITACION_EMAIL_LANDING])
                 campana_usuario[O_LINK_OFERTAS] = format_text(row[I_LINK_OFERTAS])
 
-
                 ## FLOATS
                 campana_usuario[O_SCORE_MARCA] = format_float(I_SCORE_MARCA, row, min=0.0, max=1.0)
                 campana_usuario[O_SCORE_CATEGORIA] = format_float(I_SCORE_CATEGORIA, row, min=0.0, max=1.0)
                 campana_usuario[O_SCORE_TOP] = format_float(I_SCORE_TOP, row, min=0.0, max=1.0)
                 campana_usuario[O_SCORE_LANZAMIENTO] = format_float(I_SCORE_LANZAMIENTO, row, min=0.0, max=1.0)
                 campana_usuario[O_SCORE_VISITAS] = format_float(I_SCORE_VISITAS, row, min=0.0, max=1.0)
-                campana_usuario[O_SCORE_TIP_GESTION_DIGITAL] = format_float(I_SCORE_TIP_GESTION_DIGITAL, row, min=0.0, max=1.0)
+                campana_usuario[O_SCORE_TIP_GESTION_DIGITAL] = format_float(I_SCORE_TIP_GESTION_DIGITAL, row, min=0.0,
+                                                                            max=1.0)
                 campana_usuario[O_SCORE_TIP_COBRANZA] = format_float(I_SCORE_TIP_COBRANZA, row, min=0.0, max=1.0)
                 campana_usuario[O_SCORE_MAS_CLIENTES] = format_float(I_SCORE_MAS_CLIENTES, row, min=0.0, max=1.0)
                 campana_usuario[O_SCORE_TIP_PEDIDO_ONLINE] = format_float(I_SCORE_TIP_PEDIDO_ONLINE, row)
@@ -255,23 +270,26 @@ def generate_extended_info(input_file, output_file, origin = 'SAP_ODATA_IMPORT')
                 campana_usuario[O_ANIO_CAMPANA_EXPOSICION] = int(row[I_ANIO_CAMPANA_EXPOSICION][0:4])
                 campana_usuario[O_NRO_CAMPANA_EXPOSICION] = int(row[I_ANIO_CAMPANA_EXPOSICION][4:6])
                 if campana_usuario[O_NRO_CAMPANA_EXPOSICION] not in range(1, 19):
-                    msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid domain for row {}'.format(O_NRO_CAMPANA_EXPOSICION,
-                                                                                                     row[O_NRO_CAMPANA_EXPOSICION],
-                                                                                                     row.items())
+                    msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid domain for row {}'.format(
+                        O_NRO_CAMPANA_EXPOSICION,
+                        row[O_NRO_CAMPANA_EXPOSICION],
+                        row.items())
                     raise Exception(msg)
                 campana_usuario[O_ANIO_CAMPANA_INGRESO] = int(row[I_ANIO_CAMPANA_INGRESO][0:4])
                 campana_usuario[O_NRO_CAMPANA_INGRESO] = int(row[I_ANIO_CAMPANA_INGRESO][4:6])
                 if campana_usuario[O_NRO_CAMPANA_INGRESO] not in range(1, 19):
-                    msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid domain for row {}'.format(O_NRO_CAMPANA_INGRESO,
-                                                                                                     row[O_NRO_CAMPANA_INGRESO],
-                                                                                                     row.items())
+                    msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid domain for row {}'.format(
+                        O_NRO_CAMPANA_INGRESO,
+                        row[O_NRO_CAMPANA_INGRESO],
+                        row.items())
                     raise Exception(msg)
                 campana_usuario[O_ANIO_CAMPANA_PROCESO] = int(row[I_ANIO_CAMPANA_PROCESO][0:4])
                 campana_usuario[O_NRO_CAMPANA_PROCESO] = int(row[I_ANIO_CAMPANA_PROCESO][4:6])
                 if campana_usuario[O_NRO_CAMPANA_PROCESO] not in range(1, 19):
-                    msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid domain for row {}'.format(O_NRO_CAMPANA_PROCESO,
-                                                                                                     row[O_NRO_CAMPANA_PROCESO],
-                                                                                                     row.items())
+                    msg = 'INPUT ERROR - Attribute "{}" value "{}" invalid domain for row {}'.format(
+                        O_NRO_CAMPANA_PROCESO,
+                        row[O_NRO_CAMPANA_PROCESO],
+                        row.items())
                     raise Exception(msg)
                 campana_usuario[O_NRO_CAMPANA_NUEVAS] = format_int(I_NRO_CAMPANA_NUEVAS, row, range(0, 7))
                 campana_usuario[O_NRO_PEDIDOS_NUEVAS] = format_int(I_NRO_PEDIDOS_NUEVAS, row, range(0, 7))
@@ -321,8 +339,8 @@ def generate_extended_info(input_file, output_file, origin = 'SAP_ODATA_IMPORT')
                 writer = csv.DictWriter(ofile, fieldnames=O_FIELDS_USU_CAMP, lineterminator='\n', delimiter=';')
                 ofile.write(O_CAMPANAS_CONSULTORAS_FILE_HEADER)
                 writer.writeheader()
-                ini_index = file_number*batch_size
-                end_index = min((file_number+1)*batch_size, len(to_write_values))
+                ini_index = file_number * batch_size
+                end_index = min((file_number + 1) * batch_size, len(to_write_values))
                 for item in to_write_values[ini_index:end_index]:
                     writer.writerow(item)
                     write_counter += 1
@@ -333,20 +351,24 @@ def generate_extended_info(input_file, output_file, origin = 'SAP_ODATA_IMPORT')
         raise
 
 
-def generate_contact(input_file, output_file, origin = 'SAP_ODATA_IMPORT'):
+def generate_contact(input_file, output_file, origin='SAP_ODATA_IMPORT'):
     try:
         to_write = {}
         to_discard = {}
+        to_write_odata = []
+        to_discard_odata = []
         print('Processing input file: {}'.format(input_file))
         print('Required fields: {}'.format(I_FIELDS_CONTACT))
         read_counter = 0
         with open(input_file, 'r') as input_file:
             reader = csv.DictReader(input_file, delimiter=';')
+            timestamp = get_timestamp_str()
             for row in reader:
                 contact = {}
                 for key in I_FIELDS_CONTACT:
                     if key not in row.keys():
-                        msg = 'INPUT ERROR - Attribute "{}" is not included in the input file for row {}'.format(key, row.items())
+                        msg = 'INPUT ERROR - Attribute "{}" is not included in the input file for row {}'.format(key,
+                                                                                                                 row.items())
                         raise Exception(msg)
                 contact[O_ID] = int(row[I_COD_EBELISTA])
                 contact[O_NAME_FIRST] = format_text(row[I_PRIMER_NOMBRE])
@@ -356,54 +378,100 @@ def generate_contact(input_file, output_file, origin = 'SAP_ODATA_IMPORT'):
                     contact[O_SMTP_ADDR] = row[I_CORREO_ELECTRONICO]
                     contact[O_TELNR_MOBILE] = format_phone(row[I_TEL_MOVIL])
                 else:
-                    contact[O_SMTP_ADDR] = 'brunoo.gonzalez+{}@gmail.com'.format(read_counter+1)
-                contact[O_DATE_OF_BIRTH] = format_date(I_FECHA_NACIMIENTO,row)
+                    contact[O_SMTP_ADDR] = 'brunoo.gonzalez+{}@gmail.com'.format(read_counter + 1)
+                contact[O_DATE_OF_BIRTH] = format_date(I_FECHA_NACIMIENTO, row)
                 contact[O_CODIGOEBELISTA] = int(row[I_COD_EBELISTA])
                 contact[O_DOCIDENTIDAD] = format_text(row[I_DOC_IDENTIDAD])
                 contact[O_ID_ORIGIN] = origin
                 for key in O_FIELDS_CONTACT:
                     if key not in contact.keys():
                         contact[key] = ''
+                # Copia de diccionario de contacto y edición de claves
+                contact_odata = contact.copy()
+                for contact_field in CONTACT_FIELDS:
+                    # Si existe la clave destino: cambio de nombre de clave
+                    try:
+                        # Chequea que tenga un valor diferente de vacío
+                        if contact_odata[getattr(settings, 'O_{}'.format(contact_field))] != '':
+                            value = contact_odata.pop(getattr(settings, 'O_{}'.format(contact_field)))
+                            # Modificaciones a atributos por cambio de tipo de dato
+                            if contact_field in ['ID', 'CODIGOEBELISTA']:
+                                # Modificación de int a str
+                                value = str(value)
+                            elif contact_field in ['DATE_OF_BIRTH']:
+                                # Modificación de fecha
+                                value = '/Date({})/'.format(value)
+                            contact_odata[getattr(settings, 'S_{}'.format(contact_field))] = value
+                        else:
+                            del contact_odata[getattr(settings, 'O_{}'.format(contact_field))]
+                    except:
+                        # Si no existe la clave destino: elimino clave y valor de origen
+                        try:
+                            del contact_odata[getattr(settings, 'O_{}'.format(contact_field))]
+                        except:
+                            pass
+                # Agregado de Timestamp para servicio
+                contact_odata['Timestamp'] = timestamp
                 match_phone = re.search(PHONE_REGEX, contact[O_TELNR_MOBILE])
                 match_mail = re.search(MAIL_REGEX, contact[O_SMTP_ADDR])
                 if (match_phone or contact[O_TELNR_MOBILE] == '') and \
                         (match_mail or contact[O_SMTP_ADDR] == ''):
                     to_write[contact[O_ID]] = contact
+                    to_write_odata.append(contact_odata)
                 else:
                     to_discard[contact[O_ID]] = contact
+                    to_discard_odata.append(contact_odata)
                 read_counter += 1
 
             print('Lines read: {}'.format(read_counter))
             print('Processing output file: {}'.format(output_file))
             print('Output fields: {}'.format(O_FIELDS_CONTACT))
 
-            write_counter = 0
-            batch_size = BATCH_SIZE
-            max_files = math.ceil(len(to_write.values()) / batch_size)
-            to_write_values = list(to_write.values())
-            for file_number in range(max_files):
-                parcial_output_file = output_file.replace('.csv', '_{}.csv'.format(file_number))
-                print('Processing output file: {}'.format(parcial_output_file))
-                with open(parcial_output_file, 'w') as ofile:
+            if OUTPUT_MODE == 'ODATA':
+                # Invocación de servicio en batch
+                last_index = 0
+                odata_results = []
+                while last_index < len(to_write_odata):
+                    result = post_odata_contacts(to_write_odata[last_index:last_index + BATCH_SIZE])
+                    if result != 'OK':
+                        odata_results.append(result + [last_index, last_index + BATCH_SIZE])
+                    else:
+                        odata_results.append(['POST_ODATA', 201, last_index, last_index + BATCH_SIZE])
+                    last_index += BATCH_SIZE
+                with open(output_file.replace('.csv', '_ODATA_RESULTS.csv'), 'w') as ofile:
+                    writer = csv.writer(ofile, delimiter=';')
+                    writer.writerow(['operation', 'status_code', 'index_from', 'index_to'])
+                    writer.writerows(odata_results)
+            elif OUTPUT_MODE == 'FILE':
+                write_counter = 0
+                batch_size = BATCH_SIZE
+                max_files = math.ceil(len(to_write.values()) / batch_size)
+                to_write_values = list(to_write.values())
+                for file_number in range(max_files):
+                    parcial_output_file = output_file.replace('.csv', '_{}.csv'.format(file_number))
+                    print('Processing output file: {}'.format(parcial_output_file))
+                    with open(parcial_output_file, 'w') as ofile:
+                        ofile.write(O_CONTACT_FILE_HEADER)
+                        writer = csv.DictWriter(ofile, fieldnames=O_FIELDS_CONTACT, lineterminator='\n', delimiter=';')
+                        writer.writeheader()
+                        ini_index = file_number * batch_size
+                        end_index = min((file_number + 1) * batch_size, len(to_write_values))
+                        for item in to_write_values[ini_index:end_index]:
+                            writer.writerow(item)
+                            write_counter += 1
+                print('Lines written: {}'.format(write_counter))
+
+                discard_counter = 0
+                with open(output_file.replace('.csv', '_DISCARDED.csv'), 'w') as ofile:
                     ofile.write(O_CONTACT_FILE_HEADER)
                     writer = csv.DictWriter(ofile, fieldnames=O_FIELDS_CONTACT, lineterminator='\n', delimiter=';')
                     writer.writeheader()
-                    ini_index = file_number * batch_size
-                    end_index = min((file_number + 1) * batch_size, len(to_write_values))
-                    for item in to_write_values[ini_index:end_index]:
+                    for item in to_discard.values():
                         writer.writerow(item)
-                        write_counter += 1
-            print('Lines written: {}'.format(write_counter))
-
-            discard_counter = 0
-            with open(output_file.replace('.csv', '_DISCARDED.csv') , 'w') as ofile:
-                ofile.write(O_CONTACT_FILE_HEADER)
-                writer = csv.DictWriter(ofile, fieldnames=O_FIELDS_CONTACT, lineterminator='\n', delimiter=';')
-                writer.writeheader()
-                for item in to_discard.values():
-                    writer.writerow(item)
-                    discard_counter += 1
-            print('Lines discarded: {}'.format(discard_counter))
+                        discard_counter += 1
+                print('Lines discarded: {}'.format(discard_counter))
+            else:
+                pass
     except ValueError as ve:
         print(ve)
         print(row)
@@ -423,7 +491,8 @@ def generate_interaction(input_file, output_file):
                 interaction = {}
                 for key in I_FIELDS_INTERACT:
                     if key not in row.keys():
-                        msg = 'INPUT ERROR - Attribute "{}" is not included in the input file for row {}'.format(key, row.items())
+                        msg = 'INPUT ERROR - Attribute "{}" is not included in the input file for row {}'.format(key,
+                                                                                                                 row.items())
                         raise Exception(msg)
                 if row[I_TEL_MOVIL] != '':
                     interaction[O_ID_ORIGIN] = 'MOBILE_APP_TOKEN'
@@ -466,7 +535,8 @@ def generate_interaction(input_file, output_file):
                     print('Processing output file: {}'.format(parcial_output_file))
                     with open(parcial_output_file, 'w') as ofile:
                         ofile.write(O_INTERACTION_FILE_HEADER)
-                        writer = csv.DictWriter(ofile, fieldnames=O_FIELDS_INTERACTION, lineterminator='\n', delimiter=';')
+                        writer = csv.DictWriter(ofile, fieldnames=O_FIELDS_INTERACTION, lineterminator='\n',
+                                                delimiter=';')
                         writer.writeheader()
                         ini_index = file_number * batch_size
                         end_index = min((file_number + 1) * batch_size, len(to_write_values))
@@ -477,7 +547,7 @@ def generate_interaction(input_file, output_file):
 
             discard_counter = 0
             if MODE == 'PRODUCTIVE':
-                with open(output_file.replace('.csv', '_DISCARDED.csv') , 'w') as ofile:
+                with open(output_file.replace('.csv', '_DISCARDED.csv'), 'w') as ofile:
                     ofile.write(O_INTERACTION_FILE_HEADER)
                     writer = csv.DictWriter(ofile, fieldnames=O_FIELDS_INTERACTION, lineterminator='\n', delimiter=';')
                     writer.writeheader()
@@ -491,9 +561,49 @@ def generate_interaction(input_file, output_file):
         raise
 
 
-generate_extended_info('{}/{}'.format(SOURCE_FOLDER, SOURCE_FILE),
-                       '{}/CAMPANAS_CONSULTORAS_{}'.format(OUTPUT_FOLDER, SOURCE_FILE))
+# Obtiene el timestamp actual y trunca la cantidad de caracteres, reemplazando el . que está de más
+def get_timestamp_str():
+    return '/Date({})/'.format(str(round(time.time(), 3)).replace('.', ''))
+
+
+def post_odata_contacts(contacts_data):
+    headers = {
+        'x-csrf-token': 'Fetch',
+        'cache-control': 'no-cache'
+    }
+    session = requests.session()
+    response = session.get(ODATA_GET_CSRF_URL,
+                           headers=headers,
+                           auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD))
+    if response.status_code == 200:
+        headers = {
+            'x-csrf-token': response.headers['x-csrf-token'],
+            'content-type': 'application/json',
+            'cache-control': 'no-cache'
+        }
+        post_data = {
+            "Id": "",
+            "Timestamp": get_timestamp_str(),
+            "UserName": "INTEGRATION",
+            "SourceSystemType": "EXT",
+            "SourceSystemId": "ODATA",
+            "Contacts": contacts_data
+        }
+        response = session.post(ODATA_POST_IMPORT_HEADERS_URL,
+                                headers=headers,
+                                auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD),
+                                data=json.dumps(post_data))
+        if response.status_code == 201:
+            return 'OK'
+        else:
+            return ['POST_ODATA', response.status_code]
+    else:
+        return ['GET_CSRF_TOKEN', response.status_code]
+
+
+# generate_extended_info('{}/{}'.format(SOURCE_FOLDER, SOURCE_FILE),
+#                        '{}/CAMPANAS_CONSULTORAS_{}'.format(OUTPUT_FOLDER, SOURCE_FILE))
 generate_contact('{}/{}'.format(SOURCE_FOLDER, SOURCE_FILE),
                  '{}/CONTACTS_{}'.format(OUTPUT_FOLDER, SOURCE_FILE))
-generate_interaction('{}/{}'.format(SOURCE_FOLDER, SOURCE_FILE),
-                     '{}/INTERACTIONS_{}'.format(OUTPUT_FOLDER, SOURCE_FILE))
+# generate_interaction('{}/{}'.format(SOURCE_FOLDER, SOURCE_FILE),
+#                      '{}/INTERACTIONS_{}'.format(OUTPUT_FOLDER, SOURCE_FILE))
