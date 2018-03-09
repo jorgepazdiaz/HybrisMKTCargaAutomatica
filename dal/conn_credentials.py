@@ -1,0 +1,6 @@
+SQL_DRIVER = "{SQL Server Native Client 11.0}"
+SQL_SERVER = "server"
+SQL_DB = "BelcorpCostaRica"
+SQL_UID = "belcorp"
+SQL_PWD = "belcorp"
+SQL_TRUSTED = "yes"
