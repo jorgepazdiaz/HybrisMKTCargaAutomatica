@@ -14,7 +14,6 @@ class SqlServerAccess:
     def __init__(self):
         self.conn = None
 
-    # def connect(self, driver, server, db, uid, pwd, trusted):
     def connect(self):
         if self.conn is None:
             conn_string = "Driver=" + SQL_DRIVER + ";" + \

@@ -663,7 +663,8 @@ def import_csv(source_folder, source_file, output_folder):
     with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
         print('{} - Required fields: {}'.format(PREFIX_CAMPANA_CONSULTORA, I_FIELDS_CAMPANAS_CONSULTORA))
         reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
-        campanas_consultoras_to_write, campanas_consultoras_to_discard = generate_campanas_consultoras(reader, contacts_to_write)
+        campanas_consultoras_to_write, campanas_consultoras_to_discard = generate_campanas_consultoras(reader,
+                                                                                                       contacts_to_write)
     output_file = os.path.join(output_folder, PREFIX_CAMPANA_CONSULTORA + '_' + source_file)
     write_output_file(output_file, campanas_consultoras_to_write, type=PREFIX_CAMPANA_CONSULTORA, discard=False)
     write_output_file(output_file, campanas_consultoras_to_discard, type=PREFIX_CAMPANA_CONSULTORA, discard=True)
@@ -690,17 +691,19 @@ def import_sql(output_folder):
 
     print('{} - Required fields: {}'.format(PREFIX_CONTACT, I_FIELDS_CONTACT))
     contacts_to_write, contacts_to_discard = generate_contacts(query_result)
-    output_file = os.path.join(output_folder, + PREFIX_CONTACT + '_' + SQL_DB + '_' +
+    output_file = os.path.join(output_folder, PREFIX_CONTACT + '_' + SQL_DB + '_' +
                                datetime.strftime(datetime.utcnow(), '%Y%m%d_%H%M') + '.csv')
     write_output_file(output_file, contacts_to_write, type=PREFIX_CONTACT, discard=False)
     write_output_file(output_file, contacts_to_discard, type=PREFIX_CONTACT, discard=True)
 
     print('{} - Required fields: {}'.format(PREFIX_CAMPANA_CONSULTORA, I_FIELDS_CAMPANAS_CONSULTORA))
-    campanas_consultoras_to_write, campanas_consultoras_to_discard = generate_campanas_consultoras(query_result, contacts_to_write)
-    output_file = os.path.join(output_folder, PREFIX_CAMPANA_CONSULTORA + '_' + SQL_DB + '_' + \
+    campanas_consultoras_to_write, campanas_consultoras_to_discard = generate_campanas_consultoras(query_result,
+                                                                                                   contacts_to_write)
+    output_file = os.path.join(output_folder, PREFIX_CAMPANA_CONSULTORA + '_' + SQL_DB + '_' +
                                datetime.strftime(datetime.utcnow(), '%Y%m%d_%H%M') + '.csv')
     write_output_file(output_file, campanas_consultoras_to_write, type=PREFIX_CAMPANA_CONSULTORA, discard=False)
     write_output_file(output_file, campanas_consultoras_to_discard, type=PREFIX_CAMPANA_CONSULTORA, discard=True)
+
 
 def import_from_csv_to_odata(source_folder, source_file, output_folder):
     try:
@@ -714,12 +717,12 @@ def import_from_csv_to_odata(source_folder, source_file, output_folder):
         write_output_file(output_file, contacts_to_write, type=PREFIX_CONTACT, discard=False)
         write_output_file(output_file, contacts_to_discard, type=PREFIX_CONTACT, discard=True)
         with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
-            print('{} - Required fields: {}'.format(PREFIX_CAMPANAS_CONSULTORA, I_FIELDS_CAMPANAS_CONSULTORA))
+            print('{} - Required fields: {}'.format(PREFIX_CAMPANA_CONSULTORA, I_FIELDS_CAMPANAS_CONSULTORA))
             reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
             campanas_consultoras_to_write, campanas_consultoras_to_discard = generate_campanas_consultoras(reader, contacts_to_write)
-        output_file = os.path.join(output_folder, PREFIX_CAMPANAS_CONSULTORA + '_' + source_file)
-        write_output_file(output_file, campanas_consultoras_to_write, type=PREFIX_CAMPANAS_CONSULTORA, discard=False)
-        write_output_file(output_file, campanas_consultoras_to_discard, type=PREFIX_CAMPANAS_CONSULTORA, discard=True)
+        # output_file = os.path.join(output_folder, PREFIX_CAMPANA_CONSULTORA + '_' + source_file)
+        # write_output_file(output_file, campanas_consultoras_to_write, type=PREFIX_CAMPANA_CONSULTORA, discard=False)
+        # write_output_file(output_file, campanas_consultoras_to_discard, type=PREFIX_CAMPANA_CONSULTORA, discard=True)
         # Invocación al servicio OData
         odata_access = ODataAccess()
         business_objects = {
@@ -736,6 +739,6 @@ def import_from_csv_to_odata(source_folder, source_file, output_folder):
 
 # def main():
 #if _name_ == "_main_":
-#import_csv(SOURCE_FOLDER, SOURCE_FILE, OUTPUT_FOLDER)
+import_csv(SOURCE_FOLDER, SOURCE_FILE, OUTPUT_FOLDER)
 #import_sql(OUTPUT_FOLDER)
-import_from_csv_to_odata(SOURCE_FOLDER, SOURCE_FILE, OUTPUT_FOLDER)
+#import_from_csv_to_odata(SOURCE_FOLDER, SOURCE_FILE, OUTPUT_FOLDER)
