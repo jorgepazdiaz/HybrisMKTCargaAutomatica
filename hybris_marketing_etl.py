@@ -11,9 +11,10 @@ from mapping.contacts import *
 from mapping.campanas_consultoras import *
 from mapping.interactions import *
 from validate_email import validate_email
-from dal.dal import SqlServerAccess
+from dal.dal import SqlServerAccess, ODataAccess
 from dal.queries.virtual_coach_consultoras import VIRTUAL_COACH_CONSULTORAS_QUERY
 from dal.conn_credentials import SQL_SERVER, SQL_DB
+import os
 
 
 def format_date(attribute, row):
@@ -648,14 +649,14 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
 
 
 def import_csv(source_folder, source_file, output_folder):
-    input_file = source_folder + '\\' + source_file
+    input_file = os.path.join(source_folder, source_file)
     print('GENERAL - Opening input file: {}'.format(input_file))
     # CONTACTS
     with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
         print('{} - Required fields: {}'.format(PREFIX_CONTACT, I_FIELDS_CONTACT))
         reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
         contacts_to_write, contacts_to_discard = generate_contacts(reader)
-    output_file = output_folder + '\\' + PREFIX_CONTACT + '_' + source_file
+    output_file = os.path.join(output_folder, PREFIX_CONTACT + '_' + source_file)
     write_output_file(output_file, contacts_to_write, type=PREFIX_CONTACT, discard=False)
     write_output_file(output_file, contacts_to_discard, type=PREFIX_CONTACT, discard=True)
     # CAMPANAS_CONSULTORAS
@@ -663,7 +664,7 @@ def import_csv(source_folder, source_file, output_folder):
         print('{} - Required fields: {}'.format(PREFIX_CAMPANA_CONSULTORA, I_FIELDS_CAMPANAS_CONSULTORA))
         reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
         campanas_consultoras_to_write, campanas_consultoras_to_discard = generate_campanas_consultoras(reader, contacts_to_write)
-    output_file = output_folder + '\\' + PREFIX_CAMPANA_CONSULTORA + '_' + source_file
+    output_file = os.path.join(output_folder, PREFIX_CAMPANA_CONSULTORA + '_' + source_file)
     write_output_file(output_file, campanas_consultoras_to_write, type=PREFIX_CAMPANA_CONSULTORA, discard=False)
     write_output_file(output_file, campanas_consultoras_to_discard, type=PREFIX_CAMPANA_CONSULTORA, discard=True)
     # APP_TOKEN_INTERACTION
@@ -671,7 +672,7 @@ def import_csv(source_folder, source_file, output_folder):
     #     print('{} - Required fields: {}'.format(PREFIX_APP_INSTALLED, I_FIELDS_APP_INSTALLED))
     #     reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
     #     interactions_to_write, interactions_to_discard = generate_interactions(reader, contacts_to_write)
-    # output_file = output_folder + '\\' + PREFIX_APP_INSTALLED + '_' + source_file
+    # output_file = os.path.join(output_folder, PREFIX_APP_INSTALLED)
     # write_output_file(output_file, interactions_to_write, type=PREFIX_APP_INSTALLED, discard=False)
     # write_output_file(output_file, interactions_to_discard, type=PREFIX_APP_INSTALLED, discard=True)
 
@@ -689,20 +690,52 @@ def import_sql(output_folder):
 
     print('{} - Required fields: {}'.format(PREFIX_CONTACT, I_FIELDS_CONTACT))
     contacts_to_write, contacts_to_discard = generate_contacts(query_result)
-    output_file = output_folder + '\\' + PREFIX_CONTACT + '_' + SQL_DB + '_' + \
-                  datetime.strftime(datetime.utcnow(), '%Y%m%d_%H%M') + '.csv'
+    output_file = os.path.join(output_folder, + PREFIX_CONTACT + '_' + SQL_DB + '_' +
+                               datetime.strftime(datetime.utcnow(), '%Y%m%d_%H%M') + '.csv')
     write_output_file(output_file, contacts_to_write, type=PREFIX_CONTACT, discard=False)
     write_output_file(output_file, contacts_to_discard, type=PREFIX_CONTACT, discard=True)
 
     print('{} - Required fields: {}'.format(PREFIX_CAMPANA_CONSULTORA, I_FIELDS_CAMPANAS_CONSULTORA))
     campanas_consultoras_to_write, campanas_consultoras_to_discard = generate_campanas_consultoras(query_result, contacts_to_write)
-    output_file = output_folder + '\\' + PREFIX_CAMPANA_CONSULTORA + '_' + SQL_DB + '_' + \
-                  datetime.strftime(datetime.utcnow(), '%Y%m%d_%H%M') + '.csv'
+    output_file = os.path.join(output_folder, PREFIX_CAMPANA_CONSULTORA + '_' + SQL_DB + '_' + \
+                               datetime.strftime(datetime.utcnow(), '%Y%m%d_%H%M') + '.csv')
     write_output_file(output_file, campanas_consultoras_to_write, type=PREFIX_CAMPANA_CONSULTORA, discard=False)
     write_output_file(output_file, campanas_consultoras_to_discard, type=PREFIX_CAMPANA_CONSULTORA, discard=True)
+
+def import_from_csv_to_odata(source_folder, source_file, output_folder):
+    try:
+        input_file = os.path.join(source_folder, source_file)
+        print('GENERAL - Opening input file: {}'.format(input_file))
+        with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
+            print('{} - Required fields: {}'.format(PREFIX_CONTACT, I_FIELDS_CONTACT))
+            reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
+            contacts_to_write, contacts_to_discard = generate_contacts(reader)
+        output_file = os.path.join(output_folder, PREFIX_CONTACT + '_' + source_file)
+        write_output_file(output_file, contacts_to_write, type=PREFIX_CONTACT, discard=False)
+        write_output_file(output_file, contacts_to_discard, type=PREFIX_CONTACT, discard=True)
+        with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
+            print('{} - Required fields: {}'.format(PREFIX_CAMPANAS_CONSULTORA, I_FIELDS_CAMPANAS_CONSULTORA))
+            reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
+            campanas_consultoras_to_write, campanas_consultoras_to_discard = generate_campanas_consultoras(reader, contacts_to_write)
+        output_file = os.path.join(output_folder, PREFIX_CAMPANAS_CONSULTORA + '_' + source_file)
+        write_output_file(output_file, campanas_consultoras_to_write, type=PREFIX_CAMPANAS_CONSULTORA, discard=False)
+        write_output_file(output_file, campanas_consultoras_to_discard, type=PREFIX_CAMPANAS_CONSULTORA, discard=True)
+        # Invocación al servicio OData
+        odata_access = ODataAccess()
+        business_objects = {
+            "Contacts": contacts_to_write
+        }
+        custom_business_objects = {
+            "CampanasConsultora": campanas_consultoras_to_write
+        }
+        odata_access.post_data(business_objects, custom_business_objects)
+    except ValueError as ve:
+        print(ve)
+        raise ve
 
 
 # def main():
 #if _name_ == "_main_":
-import_csv(SOURCE_FOLDER, SOURCE_FILE, OUTPUT_FOLDER)
+#import_csv(SOURCE_FOLDER, SOURCE_FILE, OUTPUT_FOLDER)
 #import_sql(OUTPUT_FOLDER)
+import_from_csv_to_odata(SOURCE_FOLDER, SOURCE_FILE, OUTPUT_FOLDER)
