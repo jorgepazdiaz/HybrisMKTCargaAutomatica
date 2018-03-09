@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 VIRTUAL_COACH_CONSULTORAS_QUERY =\
 """\
 SELECT [CodPais]

@@ -1,4 +1,4 @@
-#DOMAINS
+# -*- coding: utf-8 -*-
 D_MARCAS = ['L\'BEL', 'CYZONE', 'ESIKA']
 D_CATEGORIAS = ['CP', 'MQ', 'TC', 'FG', 'TF']
 D_CONSTANCIA_NUEVAS = ['C_1d1', 'C_2d2', 'C_3d3', 'C_4d4', 'C_5d5', 'C_6d6',

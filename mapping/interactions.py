@@ -6,7 +6,7 @@ from mapping.contacts import I_PRIMER_NOMBRE, I_APE_PATERNO, I_TEL_MOVIL, \
 I_APP_TOKEN = 'App_Token'
 
 # MARKETING INTERACTION: List of attributes that the input file must include
-I_FIELDS_INTERACT = [I_PRIMER_NOMBRE, I_APE_PATERNO, I_TEL_MOVIL, I_APP_TOKEN]
+I_FIELDS_APP_INSTALLED = [I_PRIMER_NOMBRE, I_APE_PATERNO, I_TEL_MOVIL, I_APP_TOKEN]
 
 # MARKETING INTERACTION: Attribute names used to store al info of the Marketing Interaction
 O_COMM_MEDIUM = 'COMM_MEDIUM'

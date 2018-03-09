@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import pyodbc
 from dal.conn_credentials import SQL_DRIVER, SQL_SERVER, SQL_DB, SQL_UID, SQL_PWD, SQL_TRUSTED
 
