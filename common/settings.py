@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 # INPUT SETTINGS
-SOURCE_FOLDER = 'C:\IDATHA\PYXIS\BELCORP - Hybris Marketing\Datos\Recibidos\Producción\CostaRica_20180307'
-SOURCE_FILE = 'BelcorpCostaRica_InPut_HM_20180307_UsrBelcorp_MOD.csv'
+SOURCE_FOLDER = '/Users/bruno/Downloads/IDATHA/Belcorp/ETL'
+SOURCE_FILE = 'BelcorpCostaRica_InPut_HM_20180309.csv'
 SOURCE_ENCODING = 'utf8'
 SOURCE_DELIMITER = ','
-OUTPUT_FOLDER = 'C:\IDATHA\PYXIS\BELCORP - Hybris Marketing\Datos\Transformados\Producción\CostaRica_20180307'
+OUTPUT_FOLDER = '/Users/bruno/Downloads/IDATHA/Belcorp/ETL/out'
 
 # OUTPUT SETTINGS
 MODE = 'PRODUCTIVE'
