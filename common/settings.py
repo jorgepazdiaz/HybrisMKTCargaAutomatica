@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # INPUT SETTINGS
 SOURCE_FOLDER = 'C:\IDATHA\PYXIS\BELCORP - Hybris Marketing\Datos'
-SOURCE_FILE = 'BelcorpCostaRica_InPut_HM_20180309_APP_TOKEN.csv'
+SOURCE_FILE = 'Contacto_DC_20180306.csv'
 OUTPUT_FOLDER = 'C:\IDATHA\PYXIS\BELCORP - Hybris Marketing\Datos\Transformados\Desarollo'
 SOURCE_ENCODING = 'utf8'
 SOURCE_DELIMITER = ','

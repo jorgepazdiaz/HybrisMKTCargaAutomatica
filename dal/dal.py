@@ -1,12 +1,11 @@
-from dal.conn_credentials import *
 import pyodbc
 import requests
 from requests.auth import HTTPBasicAuth
 import time
 import datetime
 import json
-from mapping.contacts import CONTACT_FIELDS
-import mapping.contacts
+from mapping.contacts import *
+from dal.conn_credentials import *
 
 
 class SqlServerAccess:
@@ -41,36 +40,26 @@ def get_timestamp_str():
 
 
 def transform_contacts(values):
-    result = []
+    to_import = []
     for contact in values.values():
-        # Copia de diccionario de contacto y edición de claves
-        contact_odata = contact.copy()
-        for contact_field in CONTACT_FIELDS:
-            # Si existe la clave destino: cambio de nombre de clave
-            try:
-                # Chequea que tenga un valor diferente de vacío
-                if contact_odata[getattr(mapping.contacts, 'O_{}'.format(contact_field))] != '':
-                    value = contact_odata.pop(getattr(mapping.contacts, 'O_{}'.format(contact_field)))
-                    # Modificaciones a atributos por cambio de tipo de dato
-                    if contact_field in ['ID', 'CODIGOEBELISTA']:
-                        # Modificación de int a str
-                        value = str(value)
-                    elif contact_field in ['DATE_OF_BIRTH']:
-                        # Modificación de fecha
-                        value = '/Date({})/'.format(value)
-                    contact_odata[getattr(mapping.contacts, 'S_{}'.format(contact_field))] = value
+        contact_odata = {}
+        for key in ODATA_CONTACT_MAPPING:
+            if key not in contact.keys():
+                raise Exception('ODATA - Key {} not found'.format(key))
+            else:
+                if key in [O_ID, O_CODIGOEBELISTA]:
+                    # Modificación de int a str
+                    contact_odata[ODATA_CONTACT_MAPPING[key]] = str(contact[key])
+                elif key in [O_DATE_OF_BIRTH]:
+                    # Modificación de fecha
+                    contact_odata[ODATA_CONTACT_MAPPING[key]] = '/Date({})/'.format(contact[key])
                 else:
-                    del contact_odata[getattr(mapping.contacts, 'O_{}'.format(contact_field))]
-            except:
-                # Si no existe la clave destino: elimino clave y valor de origen
-                try:
-                    del contact_odata[getattr(mapping.contacts, 'O_{}'.format(contact_field))]
-                except:
-                    pass
+                    contact_odata[ODATA_CONTACT_MAPPING[key]] = contact[key]
         # Agregado de Timestamp para servicio
         contact_odata['Timestamp'] = get_timestamp_str()
-        result.append(contact_odata)
-    return result
+        to_import.append(contact_odata)
+    # TODO: Handle discardes contacts
+    return to_import
 
 
 # TODO: implementar
@@ -93,8 +82,10 @@ def transform_business_objects(business_objects):
         # TODO: implementar cuando sea necesario
         elif bo == "Interests":
             pass
+        # TODO: implementar cuando sea necesario
         elif bo == "Products":
             pass
+        # TODO: implementar cuando sea necesario
         elif bo == "ProductCategories":
             pass
         else:
@@ -131,9 +122,9 @@ class ODataAccess:
         if response.status_code == 200:
             self.csrf_token = response.headers["x-csrf-token"]
             self.session_created_at = datetime.datetime.now()
-        # TODO: unificar retorno de resultados y errores. raise Exception
-        print("GET_CSRF_TOKEN - Status code:{}".format(response.status_code))
-        return 1
+        else:
+            # TODO: unificar retorno de resultados y errores. raise Exception
+            raise Exception('GET_CSRF_TOKEN - Status code:{}'.format(response.status_code))
 
     def post_data(self, business_objects, custom_business_objects):
         # Invocación de servicio de Business Objects
@@ -149,12 +140,12 @@ class ODataAccess:
         # Invocación de servicio en batch: se separa por entidad para tener mayor control de errores
         for bo_name, bo_values in new_bo.items():
             last_index = 0
-            print("Resultado para {}".format(bo_name))
+            print("ODATA - {}: Sending posts".format(bo_name))
             while last_index < len(bo_values):
-                # Verifica que esté dentro del TTL de la sesión
+                # If no session or TTL expired get new CSRF-TOKEN
                 if self.session and self.session_created_at + datetime.timedelta(minutes=SESSION_MAX_TTL_MINUTES) < \
                         datetime.datetime.now():
-                    # TODO: verificar que el resultado fue ok, sino abortar
+                    print("ODATA - {}: Getting new CSRF-TOKEN".format(bo_name))
                     self.get_csrf_token()
                 headers = {
                     "x-csrf-token": self.csrf_token,
@@ -163,15 +154,21 @@ class ODataAccess:
                 }
                 json_data = json_header
                 json_data[bo_name] = bo_values[last_index:last_index + ODATA_BATCH_SIZE]
-                response = self.session.post(ODATA_BASE_URL + ODATA_POST_IMPORT_HEADERS,
+                if bo_name == 'Contacts':
+                    post_url = ODATA_BASE_URL + ODATA_POST_IMPORT_HEADERS
+                # TODO: set CBO URL
+                elif bo_name == 'Campanas Consultora':
+                    post_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA
+                response = self.session.post(post_url,
                                              headers=headers,
                                              auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD),
                                              data=json.dumps(json_data))
                 if response.status_code == 201:
-                    print("POST_ODATA - Status code: {}. Index from {} to {}".format(201, last_index, last_index + ODATA_BATCH_SIZE))
+                    print("ODATA - {}[OK]: Status code: {}. Index from {} to {}".format(bo_name, 201, last_index, last_index + ODATA_BATCH_SIZE))
                 else:
-                    print("POST_ODATA - Status code: {}. Index from {} to {}".format(response.status_code, last_index, last_index + ODATA_BATCH_SIZE))
+                    print("ODATA - {}[ERROR]: Status code: {}. Index from {} to {}".format(bo_name, response.status_code, last_index, last_index + ODATA_BATCH_SIZE))
                 last_index += ODATA_BATCH_SIZE
+            # TODO: logoff sap/public/bc/icf/logoff
             # TODO: Invocación de servicio de Custom Business Objects
             # print("ODATA - Invoke service for Custom Business Objects")
             # new_cbo = transform_custom_business_objects(custom_business_objects)
