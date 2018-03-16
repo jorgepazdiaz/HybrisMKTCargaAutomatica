@@ -13,7 +13,7 @@ from mapping.interactions import *
 from validate_email import validate_email
 from dal.dal import SqlServerAccess, ODataAccess
 from dal.queries.virtual_coach_consultoras import VIRTUAL_COACH_CONSULTORAS_QUERY
-from dal.conn_credentials import SQL_SERVER, SQL_DB
+from dal.conn_credentials import SQL_SERVER, SQL_DB, ODATA_CONTACT, ODATA_CAMPANA_CONSULTORA
 import os
 
 
@@ -146,7 +146,8 @@ def generate_contacts(contacts):
                 contact[O_SMTP_ADDR] = TEST_MAIL.format(read_counter+1)
             if row[I_FECHA_NACIMIENTO] != '':
                 contact[O_DATE_OF_BIRTH] = format_date(I_FECHA_NACIMIENTO, row)
-            contact[O_CODIGOEBELISTA] = int(row[I_COD_EBELISTA])
+            # contact[O_CODIGOEBELISTA] = int(row[I_COD_EBELISTA])
+            contact[O_CODIGOEBELISTA] = str(row[I_COD_EBELISTA]).strip()
             contact[O_DOCIDENTIDAD] = format_text(I_DOC_IDENTIDAD, row)
             contact[O_ID_ORIGIN] = 'SAP_ODATA_IMPORT'
             generate_empty_attributes(contact, O_CONTACT_FIELDS)
@@ -634,7 +635,7 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
             if O_LINK_OFERTAS not in discarded.keys():
                 discarded[O_LINK_OFERTAS] = row[I_LINK_OFERTAS]
             if O_COD_EBELISTA not in discarded.keys():
-                discarded[O_COD_EBELISTA] = str(row[I_COD_EBELISTA]) + '_' + \
+                discarded[O_COD_EBELISTA] = str(row[I_COD_EBELISTA]).strip() + '_' + \
                                             str(campana_consultora[O_COD_PAIS])
             if O_ID_CAMPANA_CONSULTORA not in discarded.keys():
                     discarded[O_ID_CAMPANA_CONSULTORA] = str(row[O_ANIO_CAMPANA_EXPOSICION]) + \
@@ -726,13 +727,10 @@ def belcorp_csv_to_hm_odata(source_folder, source_file):
     # Invocación al servicio OData
     odata_access = ODataAccess()
     business_objects = {
-        "Contacts": contacts_to_write,
-        "Interactions": interactions_to_write
+        ODATA_CONTACT: contacts_to_write,
+        ODATA_CAMPANA_CONSULTORA: campanas_consultoras_to_write
     }
-    custom_business_objects = {
-        "CampanasConsultora": campanas_consultoras_to_write
-    }
-    odata_access.post_data(business_objects, custom_business_objects)
+    odata_access.post_data(business_objects)
 
 
 
