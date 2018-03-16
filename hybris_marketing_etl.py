@@ -711,7 +711,8 @@ def belcorp_csv_to_hm_odata(source_folder, source_file):
     with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
         print('{} - Required fields: {}'.format(PREFIX_CONTACT, I_FIELDS_CONTACT))
         reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
-        contacts_to_write, contacts_to_discard = generate_contacts(reader)
+    contacts_to_write, contacts_to_discard = generate_contacts(reader)
+    interactions_to_write, interactions_to_discard = generate_interactions(reader, contacts_to_write)
     # output_file = os.path.join(output_folder, PREFIX_CONTACT + '_' + source_file)
     # write_output_file(output_file, contacts_to_write, type=PREFIX_CONTACT, discard=False)
     # write_output_file(output_file, contacts_to_discard, type=PREFIX_CONTACT, discard=True)
@@ -725,7 +726,8 @@ def belcorp_csv_to_hm_odata(source_folder, source_file):
     # Invocación al servicio OData
     odata_access = ODataAccess()
     business_objects = {
-        "Contacts": contacts_to_write
+        "Contacts": contacts_to_write,
+        "Interactions": interactions_to_write
     }
     custom_business_objects = {
         "CampanasConsultora": campanas_consultoras_to_write
@@ -736,6 +738,6 @@ def belcorp_csv_to_hm_odata(source_folder, source_file):
 
 # def main():
 # if _name_ == "_main_":
-# belcorp_csv_to_hm_csv(SOURCE_FOLDER, SOURCE_FILE, OUTPUT_FOLDER)
+belcorp_csv_to_hm_csv(SOURCE_FOLDER, SOURCE_FILE, OUTPUT_FOLDER)
 # belcorp_sql_to_hm_csv(OUTPUT_FOLDER)
-belcorp_csv_to_hm_odata(SOURCE_FOLDER, SOURCE_FILE)
+# belcorp_csv_to_hm_odata(SOURCE_FOLDER, SOURCE_FILE)

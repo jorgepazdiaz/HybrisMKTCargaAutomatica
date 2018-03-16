@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # INPUT SETTINGS
-SOURCE_FOLDER = 'C:\IDATHA\PYXIS\BELCORP - Hybris Marketing\Datos'
-SOURCE_FILE = 'Contacto_DC_20180306.csv'
-OUTPUT_FOLDER = 'C:\IDATHA\PYXIS\BELCORP - Hybris Marketing\Datos\Transformados\Desarollo'
+SOURCE_FOLDER = '/Users/bruno/Downloads/IDATHA/Belcorp/ETL'
+SOURCE_FILE = 'BelcorpCostaRica_InPut_HM_20180309.csv'
+OUTPUT_FOLDER = '/Users/bruno/Downloads/IDATHA/Belcorp/ETL'
 SOURCE_ENCODING = 'utf8'
 SOURCE_DELIMITER = ','
 
@@ -21,3 +21,6 @@ PHONE_REGEX = '^\+\d{11}$'
 
 # EMAIL VALIDATION
 LOCAL_PART_REGEX = '^[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&*+-/=?^_`''{|}~\.]+$'
+
+# LOGGING
+LOG_FILE_DAL = 'dal.dal.log'
