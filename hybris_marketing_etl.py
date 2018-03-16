@@ -13,7 +13,7 @@ from mapping.interactions import *
 from validate_email import validate_email
 from dal.dal import SqlServerAccess, ODataAccess
 from dal.queries.virtual_coach_consultoras import VIRTUAL_COACH_CONSULTORAS_QUERY
-from dal.conn_credentials import SQL_SERVER, SQL_DB, ODATA_CONTACT, ODATA_CAMPANA_CONSULTORA
+from dal.conn_credentials import SQL_SERVER, SQL_DB, ODATA_CONTACT, ODATA_INTERACTION, ODATA_CAMPANA_CONSULTORA
 import os
 
 
@@ -37,11 +37,11 @@ def format_decimal(attribute, row, minimum=None, maximum=None):
         raise Exception(MSG_INVALID_TYPE.format(attribute))
 
 
-def format_int(attribute, row, range):
+def format_int(attribute, row, num_range):
     try:
         int_number = int(row[attribute])
-        if int_number not in range:
-            raise Exception(MSG_OUT_OF_RANGE.format(attribute, min(list(range)), max(list(range))))
+        if int_number not in num_range:
+            raise Exception(MSG_OUT_OF_RANGE.format(attribute, min(list(num_range)), max(list(num_range))))
         else:
             return int_number
     except ValueError:
@@ -72,46 +72,47 @@ def generate_empty_attributes(item, fields):
             item[key] = ''
 
 
-def write_output_file(output_file, to_write, type, discard=False):
-    if type not in OUTPUT_FILE_TYPES:
-        msg = 'OUTPUT ERROR - Function argument type with value "{}" is not included in \{{}\}'.format(type, OUTPUT_FILE_TYPES)
+def write_output_file(output_file, to_write, output_file_type, discard=False):
+    if output_file_type not in OUTPUT_FILE_TYPES:
+        msg = 'OUTPUT ERROR - Function argument output file type with value "{}" is not included in \{{}\}'. \
+            format(output_file_type, OUTPUT_FILE_TYPES)
         raise Exception(msg)
-    elif type == PREFIX_CONTACT:
-        fieldnames = O_CONTACT_FIELDS
+    elif output_file_type == PREFIX_CONTACT:
+        field_names = O_CONTACT_FIELDS
         file_header = O_CONTACT_FILE_HEADER
-    elif type == PREFIX_APP_INSTALLED:
-        fieldnames = O_INTERACTION_FIELDS
+    elif output_file_type == PREFIX_APP_INSTALLED:
+        field_names = O_INTERACTION_FIELDS
         file_header = O_INTERACTION_FILE_HEADER
-    elif type == PREFIX_CAMPANA_CONSULTORA:
-        fieldnames = O_CAMPANA_CONSULTORA_FIELDS
+    elif output_file_type == PREFIX_CAMPANA_CONSULTORA:
+        field_names = O_CAMPANA_CONSULTORA_FIELDS
         file_header = O_CAMPANA_CONSULTORA_FILE_HEADER
     if discard:
-        print('{} - Writing discarded file: {}'.format(type, output_file))
+        print('{} - Writing discarded file: {}'.format(output_file_type, output_file))
         discard_counter = 0
         with open(output_file.replace('.csv', '_DISCARDED.csv'), 'w', encoding="utf8") as ofile:
-            fieldnames.copy()
-            fieldnames.append(O_DISCARD_MOTIVE)
+            field_names.copy()
+            field_names.append(O_DISCARD_MOTIVE)
             # ofile.write(file_header)
-            writer = csv.DictWriter(ofile, fieldnames=fieldnames, lineterminator='\n', delimiter=';')
+            writer = csv.DictWriter(ofile, fieldnames=field_names, lineterminator='\n', delimiter=';')
             writer.writeheader()
             for item in to_write.values():
                 writer.writerow(item)
                 discard_counter += 1
             ofile.flush()
             ofile.close()
-        print('{} - Lines discarded: {}'.format(type, discard_counter))
+        print('{} - Lines discarded: {}'.format(output_file_type, discard_counter))
     else:
-        print('{} - Writing output file(s): {}'.format(type, output_file))
-        print('{} - Output fields: {}'.format(type, fieldnames))
+        print('{} - Writing output file(s): {}'.format(output_file_type, output_file))
+        print('{} - Output fields: {}'.format(output_file_type, field_names))
         write_counter = 0
-        max_files = math.ceil(len(to_write.values()) / BATCH_SIZE)
+        max_files = int(math.ceil(len(to_write.values()) / BATCH_SIZE))
         to_write_values = list(to_write.values())
         for file_number in range(max_files):
             parcial_output_file = output_file.replace('.csv', '_{}.csv'.format(file_number))
-            print('{} - Processing output file: {}'.format(type, parcial_output_file))
+            print('{} - Processing output file: {}'.format(output_file_type, parcial_output_file))
             with open(parcial_output_file, 'w', encoding='utf8') as ofile:
                 ofile.write(file_header)
-                writer = csv.DictWriter(ofile, fieldnames=fieldnames, lineterminator='\n', delimiter=';')
+                writer = csv.DictWriter(ofile, fieldnames=field_names, lineterminator='\n', delimiter=';')
                 writer.writeheader()
                 ini_index = file_number * BATCH_SIZE
                 end_index = min((file_number + 1) * BATCH_SIZE, len(to_write_values))
@@ -120,7 +121,7 @@ def write_output_file(output_file, to_write, type, discard=False):
                     write_counter += 1
                 ofile.flush()
                 ofile.close()
-        print('{} - Lines written: {}'.format(type, write_counter))
+        print('{} - Lines written: {}'.format(output_file_type, write_counter))
 
 
 def generate_contacts(contacts):
@@ -143,7 +144,7 @@ def generate_contacts(contacts):
                 # Debido a que datos enviados no cumlpen con formato no se carga este atributo
                 # contact[O_TELNR_MOBILE] = format_phone(I_TEL_MOVIL, row)
             else:
-                contact[O_SMTP_ADDR] = TEST_MAIL.format(read_counter+1)
+                contact[O_SMTP_ADDR] = TEST_MAIL.format(read_counter + 1)
             if row[I_FECHA_NACIMIENTO] != '':
                 contact[O_DATE_OF_BIRTH] = format_date(I_FECHA_NACIMIENTO, row)
             # contact[O_CODIGOEBELISTA] = int(row[I_COD_EBELISTA])
@@ -161,7 +162,7 @@ def generate_contacts(contacts):
                 if not is_valid_mail:
                     raise ValueError(MSG_INVALID_MAIL)
                 else:
-                    [local_part, domain_part] = str(contact[O_SMTP_ADDR]).split('@',1)
+                    [local_part, domain_part] = str(contact[O_SMTP_ADDR]).split('@', 1)
                     if not re.search(LOCAL_PART_REGEX, local_part):
                         raise ValueError(MSG_INVALID_MAIL)
                     else:
@@ -213,7 +214,7 @@ def generate_interactions(interactions, contacts):
 
             contact_id = str(int(row[I_COD_EBELISTA])) + '_' + str(row[I_COD_PAIS])
 
-            interaction[O_ID_ORIGIN] = 'MOBILE_APP_TOKEN'
+            interaction[O_ID_ORIGIN] = format_text(I_MOBILE_APP, row)
             interaction[O_COMM_MEDIUM] = 'MOBILE_APP'
             interaction[O_IA_TYPE] = 'MOB_APP_INSTALLED'
             interaction[O_DEVICE_TYPE] = 'PHONE'
@@ -239,7 +240,7 @@ def generate_interactions(interactions, contacts):
             discarded = interaction.copy()
             discarded[O_DISCARD_MOTIVE] = e.args[0]
             if O_ID_ORIGIN not in discarded.keys():
-                discarded[O_ID_ORIGIN] = 'MOBILE_APP_TOKEN'
+                discarded[O_ID_ORIGIN] = str(row[I_MOBILE_APP]).strip()
             if O_COMM_MEDIUM not in discarded.keys():
                 discarded[O_COMM_MEDIUM] = 'MOBILE_APP'
             if O_IA_TYPE not in discarded.keys():
@@ -277,7 +278,7 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
                 else:
                     discarded[key] = row[key]
 
-            ## CUSTOM VALIDATIONS
+            # CUSTOM VALIDATIONS
             try:
                 campana_consultora[O_COD_PAIS] = row[I_COD_PAIS]
                 if len(campana_consultora[O_COD_PAIS]) != 2:
@@ -318,8 +319,10 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
                 if campana_consultora[O_DESC_SEGMENTO] not in [x[1] for x in D_SEGMENTOS]:
                     raise Exception(MSG_INVALID_DOMAIN.format(I_DESC_SEGMENTO))
                 else:
-                    if [campana_consultora[O_COD_COMPORTAMIENTO], campana_consultora[O_DESC_SEGMENTO]] not in D_SEGMENTOS:
-                        raise Exception('Attributes "{}"-"{}" invalid tuple'.format(I_COD_COMPORTAMIENTO, I_DESC_SEGMENTO))
+                    if [campana_consultora[O_COD_COMPORTAMIENTO], campana_consultora[O_DESC_SEGMENTO]] \
+                            not in D_SEGMENTOS:
+                        raise Exception(
+                            'Attributes "{}"-"{}" invalid tuple'.format(I_COD_COMPORTAMIENTO, I_DESC_SEGMENTO))
             except ValueError:
                 raise Exception(MSG_INVALID_TYPE.format(I_DESC_SEGMENTO))
 
@@ -388,7 +391,8 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
                 campana_consultora[O_DESC_MARCA_SCORE] = format_text(I_DESC_MARCA_SCORE, row)
                 if campana_consultora[O_DESC_MARCA_SCORE] == '0':
                     campana_consultora[O_DESC_MARCA_SCORE] = ''
-                if campana_consultora[O_DESC_MARCA_SCORE] != '' and campana_consultora[O_DESC_MARCA_SCORE] not in D_MARCAS:
+                if campana_consultora[O_DESC_MARCA_SCORE] != '' and \
+                                campana_consultora[O_DESC_MARCA_SCORE] not in D_MARCAS:
                     raise Exception(MSG_INVALID_DOMAIN.format(I_DESC_MARCA_SCORE))
             except ValueError:
                 raise Exception(MSG_INVALID_TYPE.format(I_DESC_MARCA_SCORE))
@@ -403,7 +407,7 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
             except ValueError:
                 raise Exception(MSG_INVALID_TYPE.format(I_DESC_CAT_SCORE))
 
-            ## INTEGERS
+            # INTEGERS
             try:
                 campana_consultora[O_ANIO_CAMPANA_EXPOSICION] = int(row[I_ANIO_CAMPANA_EXPOSICION][0:4])
                 campana_consultora[O_NRO_CAMPANA_EXPOSICION] = int(row[I_ANIO_CAMPANA_EXPOSICION][4:6])
@@ -443,31 +447,36 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
                 campana_consultora[O_FLAG_PASO_PEDIDO] = format_int(I_FLAG_PASO_PEDIDO, row, range(0, 2))
                 campana_consultora[O_FLAG_INSCRITA_GANA_MAS] = format_int(I_FLAG_INSCRITA_GANA_MAS, row, range(0, 3))
 
-                ## DATES
+                # DATES
                 campana_consultora[O_FECHA_INICIO_VENTA] = format_date(I_FECHA_INICIO_VENTA, row)
                 campana_consultora[O_FECHA_FIN_VENTA] = format_date(I_FECHA_FIN_VENTA, row)
                 campana_consultora[O_FECHA_INICIO_FACTURACION] = format_date(I_FECHA_INICIO_FACTURACION, row)
                 campana_consultora[O_FECHA_FIN_FACTURACION] = format_date(I_FECHA_FIN_FACTURACION, row)
                 campana_consultora[O_FECHA_ENVIO] = format_date(I_FECHA_ENVIO, row)
 
-                ## DECIMALS
+                # DECIMALS
                 campana_consultora[O_SCORE_MARCA] = format_decimal(I_SCORE_MARCA, row, minimum=0.0, maximum=1.0)
                 campana_consultora[O_SCORE_CATEGORIA] = format_decimal(I_SCORE_CATEGORIA, row, minimum=0.0, maximum=1.0)
                 campana_consultora[O_SCORE_TOP] = format_decimal(I_SCORE_TOP, row, minimum=0.0, maximum=1.0)
-                campana_consultora[O_SCORE_LANZAMIENTO] = format_decimal(I_SCORE_LANZAMIENTO, row, minimum=0.0, maximum=1000.0)
+                campana_consultora[O_SCORE_LANZAMIENTO] = \
+                    format_decimal(I_SCORE_LANZAMIENTO, row, minimum=0.0, maximum=1000.0)
                 campana_consultora[O_SCORE_VISITAS] = format_decimal(I_SCORE_VISITAS, row, minimum=0.0, maximum=1000.0)
-                campana_consultora[O_SCORE_TIP_GESTION_DIGITAL] = format_decimal(I_SCORE_TIP_GESTION_DIGITAL, row, minimum=0.0, maximum=1.0)
-                campana_consultora[O_SCORE_TIP_COBRANZA] = format_decimal(I_SCORE_TIP_COBRANZA, row, minimum=0.0, maximum=1.0)
-                campana_consultora[O_SCORE_MAS_CLIENTES] = format_decimal(I_SCORE_MAS_CLIENTES, row, minimum=0.0, maximum=1.0)
+                campana_consultora[O_SCORE_TIP_GESTION_DIGITAL] = \
+                    format_decimal(I_SCORE_TIP_GESTION_DIGITAL, row, minimum=0.0, maximum=1.0)
+                campana_consultora[O_SCORE_TIP_COBRANZA] = \
+                    format_decimal(I_SCORE_TIP_COBRANZA, row, minimum=0.0, maximum=1.0)
+                campana_consultora[O_SCORE_MAS_CLIENTES] = \
+                    format_decimal(I_SCORE_MAS_CLIENTES, row, minimum=0.0, maximum=1.0)
                 campana_consultora[O_SCORE_TIP_PEDIDO_ONLINE] = format_decimal(I_SCORE_TIP_PEDIDO_ONLINE, row)
-                campana_consultora[O_PROBABILIDAD_FUGA] = format_decimal(I_PROBABILIDAD_FUGA, row, minimum=0.0, maximum=100.0)
+                campana_consultora[O_PROBABILIDAD_FUGA] = \
+                    format_decimal(I_PROBABILIDAD_FUGA, row, minimum=0.0, maximum=100.0)
                 campana_consultora[O_VTA_FACTURADA_UC] = format_decimal(I_VTA_FACTURADA_UC, row)
                 campana_consultora[O_PRECIO_LANZAMIENTO] = format_decimal(I_PRECIO_LANZAMIENTO, row)
                 campana_consultora[O_PRECIO_TOP] = format_decimal(I_PRECIO_TOP, row)
                 campana_consultora[O_MONTO_DEUDA] = format_decimal(I_MONTO_DEUDA, row)
                 campana_consultora[O_MAX_VTA_FACTURADA_PU5C] = format_decimal(I_MAX_VTA_FACTURADA_PU5C, row)
 
-                ## TEXTS
+                # TEXTS
                 campana_consultora[O_CUC_LANZAMIENTO] = format_text(I_CUC_LANZAMIENTO, row)
                 campana_consultora[O_CUC_TOP] = format_text(I_CUC_TOP, row)
                 campana_consultora[O_DESC_LANZAMIENTO] = format_text(I_DESC_LANZAMIENTO, row)
@@ -484,10 +493,11 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
 
             if len(str(int(row[I_COD_EBELISTA]))) > 15:
                 raise Exception(MSG_INVALID_DOMAIN.format(I_COD_EBELISTA))
-            campana_consultora[O_COD_EBELISTA] = str(int(row[I_COD_EBELISTA])) + '_' + str(campana_consultora[O_COD_PAIS])
+            campana_consultora[O_COD_EBELISTA] = \
+                str(int(row[I_COD_EBELISTA])) + '_' + str(campana_consultora[O_COD_PAIS])
             campana_consultora[O_ID_CAMPANA_CONSULTORA] = str(campana_consultora[O_ANIO_CAMPANA_EXPOSICION]) + \
-                                                          str(campana_consultora[O_NRO_CAMPANA_EXPOSICION]).zfill(2) + '_' + \
-                                                          str(campana_consultora[O_COD_EBELISTA])
+                                                          str(campana_consultora[O_NRO_CAMPANA_EXPOSICION]).zfill(2) + \
+                                                          '_' + str(campana_consultora[O_COD_EBELISTA])
             campana_consultora[O_IDORIGIN] = 'SAP_ODATA_IMPORT'
             if campana_consultora[O_COD_EBELISTA] in contacts.keys():
                 campanas_consultoras_to_write[campana_consultora[O_ID_CAMPANA_CONSULTORA]] = campana_consultora
@@ -638,9 +648,9 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
                 discarded[O_COD_EBELISTA] = str(row[I_COD_EBELISTA]).strip() + '_' + \
                                             str(campana_consultora[O_COD_PAIS])
             if O_ID_CAMPANA_CONSULTORA not in discarded.keys():
-                    discarded[O_ID_CAMPANA_CONSULTORA] = str(row[O_ANIO_CAMPANA_EXPOSICION]) + \
-                                                         str(row[O_NRO_CAMPANA_EXPOSICION]).zfill(2) + '_' + \
-                                                         str(row[O_COD_EBELISTA])
+                discarded[O_ID_CAMPANA_CONSULTORA] = str(row[O_ANIO_CAMPANA_EXPOSICION]) + \
+                                                     str(row[O_NRO_CAMPANA_EXPOSICION]).zfill(2) + '_' + \
+                                                     str(row[O_COD_EBELISTA])
             if O_IDORIGIN not in discarded.keys():
                 discarded[O_IDORIGIN] = 'SAP_ODATA_IMPORT'
             generate_empty_attributes(discarded, O_CAMPANA_CONSULTORA_FIELDS)
@@ -658,8 +668,8 @@ def belcorp_csv_to_hm_csv(source_folder, source_file, output_folder):
         reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
         contacts_to_write, contacts_to_discard = generate_contacts(reader)
     output_file = os.path.join(output_folder, PREFIX_CONTACT + '_' + source_file)
-    write_output_file(output_file, contacts_to_write, type=PREFIX_CONTACT, discard=False)
-    write_output_file(output_file, contacts_to_discard, type=PREFIX_CONTACT, discard=True)
+    write_output_file(output_file, contacts_to_write, output_file_type=PREFIX_CONTACT, discard=False)
+    write_output_file(output_file, contacts_to_discard, output_file_type=PREFIX_CONTACT, discard=True)
     # CAMPANAS_CONSULTORAS
     with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
         print('{} - Required fields: {}'.format(PREFIX_CAMPANA_CONSULTORA, I_FIELDS_CAMPANAS_CONSULTORA))
@@ -667,8 +677,12 @@ def belcorp_csv_to_hm_csv(source_folder, source_file, output_folder):
         campanas_consultoras_to_write, campanas_consultoras_to_discard = generate_campanas_consultoras(reader,
                                                                                                        contacts_to_write)
     output_file = os.path.join(output_folder, PREFIX_CAMPANA_CONSULTORA + '_' + source_file)
-    write_output_file(output_file, campanas_consultoras_to_write, type=PREFIX_CAMPANA_CONSULTORA, discard=False)
-    write_output_file(output_file, campanas_consultoras_to_discard, type=PREFIX_CAMPANA_CONSULTORA, discard=True)
+    write_output_file(output_file, campanas_consultoras_to_write,
+                      output_file_type=PREFIX_CAMPANA_CONSULTORA,
+                      discard=False)
+    write_output_file(output_file, campanas_consultoras_to_discard,
+                      output_file_type=PREFIX_CAMPANA_CONSULTORA,
+                      discard=True)
     # APP_TOKEN_INTERACTION
     # with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
     #     print('{} - Required fields: {}'.format(PREFIX_APP_INSTALLED, I_FIELDS_APP_INSTALLED))
@@ -694,16 +708,20 @@ def belcorp_sql_to_hm_csv(output_folder):
     contacts_to_write, contacts_to_discard = generate_contacts(query_result)
     output_file = os.path.join(output_folder, PREFIX_CONTACT + '_' + SQL_DB + '_' +
                                datetime.strftime(datetime.utcnow(), '%Y%m%d_%H%M') + '.csv')
-    write_output_file(output_file, contacts_to_write, type=PREFIX_CONTACT, discard=False)
-    write_output_file(output_file, contacts_to_discard, type=PREFIX_CONTACT, discard=True)
+    write_output_file(output_file, contacts_to_write, output_file_type=PREFIX_CONTACT, discard=False)
+    write_output_file(output_file, contacts_to_discard, output_file_type=PREFIX_CONTACT, discard=True)
 
     print('{} - Required fields: {}'.format(PREFIX_CAMPANA_CONSULTORA, I_FIELDS_CAMPANAS_CONSULTORA))
     campanas_consultoras_to_write, campanas_consultoras_to_discard = generate_campanas_consultoras(query_result,
                                                                                                    contacts_to_write)
     output_file = os.path.join(output_folder, PREFIX_CAMPANA_CONSULTORA + '_' + SQL_DB + '_' +
                                datetime.strftime(datetime.utcnow(), '%Y%m%d_%H%M') + '.csv')
-    write_output_file(output_file, campanas_consultoras_to_write, type=PREFIX_CAMPANA_CONSULTORA, discard=False)
-    write_output_file(output_file, campanas_consultoras_to_discard, type=PREFIX_CAMPANA_CONSULTORA, discard=True)
+    write_output_file(output_file, campanas_consultoras_to_write,
+                      output_file_type=PREFIX_CAMPANA_CONSULTORA,
+                      discard=False)
+    write_output_file(output_file, campanas_consultoras_to_discard,
+                      output_file_type=PREFIX_CAMPANA_CONSULTORA,
+                      discard=True)
 
 
 def belcorp_csv_to_hm_odata(source_folder, source_file):
@@ -720,7 +738,8 @@ def belcorp_csv_to_hm_odata(source_folder, source_file):
     with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
         print('{} - Required fields: {}'.format(PREFIX_CAMPANA_CONSULTORA, I_FIELDS_CAMPANAS_CONSULTORA))
         reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
-        campanas_consultoras_to_write, campanas_consultoras_to_discard = generate_campanas_consultoras(reader, contacts_to_write)
+        campanas_consultoras_to_write, campanas_consultoras_to_discard = generate_campanas_consultoras(reader,
+                                                                                                       contacts_to_write)
     # output_file = os.path.join(output_folder, PREFIX_CAMPANA_CONSULTORA + '_' + source_file)
     # write_output_file(output_file, campanas_consultoras_to_write, type=PREFIX_CAMPANA_CONSULTORA, discard=False)
     # write_output_file(output_file, campanas_consultoras_to_discard, type=PREFIX_CAMPANA_CONSULTORA, discard=True)
@@ -728,10 +747,10 @@ def belcorp_csv_to_hm_odata(source_folder, source_file):
     odata_access = ODataAccess()
     business_objects = {
         ODATA_CONTACT: contacts_to_write,
+        ODATA_INTERACTION: interactions_to_write,
         ODATA_CAMPANA_CONSULTORA: campanas_consultoras_to_write
     }
     odata_access.post_data(business_objects)
-
 
 
 # def main():

@@ -100,7 +100,7 @@ def transform_business_objects(business_objects):
             result[bo] = transform_contacts(values)
         elif bo == ODATA_CAMPANA_CONSULTORA:
             result[bo] = transform_campanas_consultora(values)
-        elif bo == "Interactions":
+        elif bo == ODATA_INTERACTION:
             # result[bo] = transform_interactions(values)
             pass
         # TODO: implementar cuando sea necesario
@@ -112,16 +112,6 @@ def transform_business_objects(business_objects):
         # TODO: implementar cuando sea necesario
         elif bo == 'ProductCategories':
             pass
-        else:
-            result[bo] = None
-    return result
-
-
-def transform_custom_business_objects(custom_business_objects):
-    result = {}
-    for bo, values in custom_business_objects.items():
-        if bo == 'CampanasConsultora':
-            result[bo] = transform_campanas_consultora(values)
         else:
             result[bo] = None
     return result
@@ -169,104 +159,106 @@ class ODataAccess:
         new_bo = transform_business_objects(business_objects)
         # Invocación de servicio en batch: se separa por entidad para tener mayor control de errores
         for bo_name, bo_values in new_bo.items():
-            logging.info('ODataAccess - post_data - {}: Sending posts'.format(bo_name))
-            print('ODATA - {}: Sending posts'.format(bo_name))
-            last_index = 0
-            batch_size = 1
-            if bo_name == ODATA_CONTACT:
-                batch_size = ODATA_BATCH_SIZE
-            if bo_name == 'Contacts' or bo_name == 'Interactions':
-                post_url = ODATA_BASE_URL + ODATA_POST_IMPORT_HEADERS
-            # TODO: poner la URL que corresponde a CampanasConsultora
-            elif bo_name == 'CampanasConsultora':
-                post_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA
-            while last_index < len(bo_values):
-                # Si no existe la sesión o expiró el CSRF token, solicitar uno nuevo
-                if not self.session and self.session_created_at + datetime.timedelta(minutes=ODATA_SESSION_MAX_TTL) < \
-                        datetime.datetime.now():
-                    logging.info('ODataAccess - post_data - Session expired: Getting new csrf-token')
-                    print('ODATA - {}: Getting new CSRF-TOKEN'.format(bo_name))
-                    self.get_csrf_token()
-                headers = {
-                    'x-csrf-token': self.csrf_token,
-                    'content-type': 'application/json',
-                    'cache-control': 'no-cache'
-                }
-                logging.info('ODataAccess - post_data - Sending data for {}: from {} to {}'.
-                             format(bo_name, last_index, last_index + ODATA_BATCH_SIZE))
+            # Se descartan las interacciones porque se suben en conjunto con los contactos
+            if bo_name != ODATA_INTERACTION:
+                logging.info('ODataAccess - post_data - {}: Sending posts'.format(bo_name))
+                print('ODATA - {}: Sending posts'.format(bo_name))
+                last_index = 0
+                batch_size = 1
                 if bo_name == ODATA_CONTACT:
-                    json_data = json_header
-                    json_data[bo_name] = bo_values[last_index:last_index + batch_size]
+                    batch_size = ODATA_BATCH_SIZE
+                if bo_name in [ODATA_CONTACT, ODATA_INTERACTION]:
                     post_url = ODATA_BASE_URL + ODATA_POST_IMPORT_HEADERS
+                # TODO: poner la URL que corresponde a CampanasConsultora
                 elif bo_name == ODATA_CAMPANA_CONSULTORA:
-                    json_data = bo_values[last_index]
                     post_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA
-                response = self.session.post(post_url,
-                                             headers=headers,
-                                             auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD),
-                                             data=json.dumps(json_data))
-
-                if response.status_code == 201:
-                    logging.info('ODataAccess - post_data - Status code 201 - Data sent OK for {}: from {} to {}'.
+                while last_index < len(bo_values):
+                    # Si no existe la sesión o expiró el CSRF token, solicitar uno nuevo
+                    if not self.session and self.session_created_at + datetime.timedelta(minutes=ODATA_SESSION_MAX_TTL) < \
+                            datetime.datetime.now():
+                        logging.info('ODataAccess - post_data - Session expired: Getting new csrf-token')
+                        print('ODATA - {}: Getting new CSRF-TOKEN'.format(bo_name))
+                        self.get_csrf_token()
+                    headers = {
+                        'x-csrf-token': self.csrf_token,
+                        'content-type': 'application/json',
+                        'cache-control': 'no-cache'
+                    }
+                    logging.info('ODataAccess - post_data - Sending data for {}: from {} to {}'.
                                  format(bo_name, last_index, last_index + ODATA_BATCH_SIZE))
-                    print("ODATA - {}[OK]: Status code: {}. Index from {} to {}".format(bo_name, response.status_code,
-                                                                                        last_index, last_index +
-                                                                                        batch_size))
-                elif bo_name == ODATA_CAMPANA_CONSULTORA and response.status_code == 400:
-                    print("ODATA - {}: Getting SAP_UUID - {}='{}' and {}='{}'".format(bo_name, O_IDORIGIN,
-                                                                                      json_data[O_IDORIGIN],
-                                                                                      ODATA_CAMPANA_CONSULTORA_MAPPING[
-                                                                                          O_ID_CAMPANA_CONSULTORA],
-                                                                                      json_data[
+                    if bo_name == ODATA_CONTACT:
+                        json_data = json_header
+                        json_data[bo_name] = bo_values[last_index:last_index + batch_size]
+                        post_url = ODATA_BASE_URL + ODATA_POST_IMPORT_HEADERS
+                    elif bo_name == ODATA_CAMPANA_CONSULTORA:
+                        json_data = bo_values[last_index]
+                        post_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA
+                    response = self.session.post(post_url,
+                                                 headers=headers,
+                                                 auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD),
+                                                 data=json.dumps(json_data))
+
+                    if response.status_code == 201:
+                        logging.info('ODataAccess - post_data - Status code 201 - Data sent OK for {}: from {} to {}'.
+                                     format(bo_name, last_index, last_index + ODATA_BATCH_SIZE))
+                        print("ODATA - {}[OK]: Status code: {}. Index from {} to {}".format(bo_name, response.status_code,
+                                                                                            last_index, last_index +
+                                                                                            batch_size))
+                    elif bo_name == ODATA_CAMPANA_CONSULTORA and response.status_code == 400:
+                        print("ODATA - {}: Getting SAP_UUID - {}='{}' and {}='{}'".format(bo_name, O_IDORIGIN,
+                                                                                          json_data[O_IDORIGIN],
                                                                                           ODATA_CAMPANA_CONSULTORA_MAPPING[
-                                                                                              O_ID_CAMPANA_CONSULTORA]]))
-                    get_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA + "?$select=SAP_UUID&$filter=" + \
-                              O_IDORIGIN + " eq '" + json_data[O_IDORIGIN] + "' and " + \
-                              ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA] + " eq '" + \
-                              json_data[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]] + "'"
-                    # get_url = "https://my300972-api.s4hana.ondemand.com/sap/opu/odata/sap/YY1_CAMPANAS_CONSULTORA_CDS/YY1_CAMPANAS_CONSULTORA?$select=SAP_UUID&$filter=ID_ORIGIN eq 'SAP_ODATA_IMPORT' and IdCampanaConsultora eq '201806_2222_UY'"
-                    response = self.session.get(get_url,
-                                                headers=headers,
-                                                auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD))
-                    if response.status_code == 200:
-                        matches = re.search('<d:SAP_UUID>(.*?)</d:SAP_UUID>', str(response.content), re.IGNORECASE)
-                        if matches:
-                            sap_uuid = matches.group(1)
-                            put_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA + "(guid'" + sap_uuid + "')"
-                            response = self.session.put(put_url,
-                                                        headers=headers,
-                                                        auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD),
-                                                        data=json.dumps(json_data))
-                            if response.status_code == 204:
-                                print("ODATA - {}[OK]: Status code: {}. Index from {} to {}".format(bo_name,
-                                                                                                    response.status_code,
-                                                                                                    last_index,
-                                                                                                    last_index +
-                                                                                                    batch_size))
+                                                                                              O_ID_CAMPANA_CONSULTORA],
+                                                                                          json_data[
+                                                                                              ODATA_CAMPANA_CONSULTORA_MAPPING[
+                                                                                                  O_ID_CAMPANA_CONSULTORA]]))
+                        get_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA + "?$select=SAP_UUID&$filter=" + \
+                                  O_IDORIGIN + " eq '" + json_data[O_IDORIGIN] + "' and " + \
+                                  ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA] + " eq '" + \
+                                  json_data[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]] + "'"
+                        # get_url = "https://my300972-api.s4hana.ondemand.com/sap/opu/odata/sap/YY1_CAMPANAS_CONSULTORA_CDS/YY1_CAMPANAS_CONSULTORA?$select=SAP_UUID&$filter=ID_ORIGIN eq 'SAP_ODATA_IMPORT' and IdCampanaConsultora eq '201806_2222_UY'"
+                        response = self.session.get(get_url,
+                                                    headers=headers,
+                                                    auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD))
+                        if response.status_code == 200:
+                            matches = re.search('<d:SAP_UUID>(.*?)</d:SAP_UUID>', str(response.content), re.IGNORECASE)
+                            if matches:
+                                sap_uuid = matches.group(1)
+                                put_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA + "(guid'" + sap_uuid + "')"
+                                response = self.session.put(put_url,
+                                                            headers=headers,
+                                                            auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD),
+                                                            data=json.dumps(json_data))
+                                if response.status_code == 204:
+                                    print("ODATA - {}[OK]: Status code: {}. Index from {} to {}".format(bo_name,
+                                                                                                        response.status_code,
+                                                                                                        last_index,
+                                                                                                        last_index +
+                                                                                                        batch_size))
+                                else:
+                                    print("ODATA - {}[ERROR]: Status code: {}. Index from {} to {}".format(bo_name,
+                                                                                                           response.status_code,
+                                                                                                           last_index,
+                                                                                                           last_index +
+                                                                                                           batch_size))
                             else:
-                                print("ODATA - {}[ERROR]: Status code: {}. Index from {} to {}".format(bo_name,
-                                                                                                       response.status_code,
-                                                                                                       last_index,
-                                                                                                       last_index +
-                                                                                                       batch_size))
+                                print("ODATA - {}[ERROR]: No SAP_UUID found. Index from {} to {}".format(bo_name,
+                                                                                                         last_index,
+                                                                                                         last_index +
+                                                                                                         batch_size))
                         else:
-                            print("ODATA - {}[ERROR]: No SAP_UUID found. Index from {} to {}".format(bo_name,
-                                                                                                     last_index,
-                                                                                                     last_index +
-                                                                                                     batch_size))
+                            print("ODATA - {}[ERROR]: Status code: {}. Index from {} to {}".format(bo_name,
+                                                                                                   response.status_code,
+                                                                                                   last_index,
+                                                                                                   last_index +
+                                                                                                   batch_size))
                     else:
-                        print("ODATA - {}[ERROR]: Status code: {}. Index from {} to {}".format(bo_name,
-                                                                                               response.status_code,
-                                                                                               last_index,
-                                                                                               last_index +
+                        logging.error('ODataAccess - post_data - Status code {} - Data sent OK for {}: from {} to {}'.
+                            format(response.status_code, bo_name, last_index, last_index + ODATA_BATCH_SIZE))
+                        print("ODATA - {}[ERROR]: Status code: {}. Index from {} to {}".format(bo_name, response.status_code,
+                                                                                               last_index, last_index +
                                                                                                batch_size))
-                else:
-                    logging.error('ODataAccess - post_data - Status code {} - Data sent OK for {}: from {} to {}'.
-                        format(response.status_code, bo_name, last_index, last_index + ODATA_BATCH_SIZE))
-                    print("ODATA - {}[ERROR]: Status code: {}. Index from {} to {}".format(bo_name, response.status_code,
-                                                                                           last_index, last_index +
-                                                                                           batch_size))
-                last_index += batch_size
-            print("ODATA - {}: Finished".format(bo_name))
+                    last_index += batch_size
+                print("ODATA - {}: Finished".format(bo_name))
             # TODO: logoff sap/public/bc/icf/logoff
         print(new_bo)
