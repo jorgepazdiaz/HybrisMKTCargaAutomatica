@@ -3,11 +3,17 @@ from mapping.contacts import I_PRIMER_NOMBRE, I_APE_PATERNO, I_TEL_MOVIL, \
     O_ID_ORIGIN, O_ID, O_NAME_FIRST, O_NAME_LAST, O_TELNR_MOBILE
 
 # INTERACTION: Attribute names that will be loaded from the CSV
-I_APP_TOKEN = 'App_Token'
-I_MOBILE_APP = 'Mobile_App'
+I_FLAG_APP_CONS = 'FlagAppCons'
+I_TOKEN_APP_CONS = 'TokenAppCons'
+I_FLAG_APP_SOCIA = 'FlagAppSocia'
+I_TOKEN_APP_SOCIA = 'TokenAppSocia'
+
+APP_CONS_ID_ORIGIN = 'APP_CONSULTORA'
+APP_SOCIA_ID_ORIGIN = 'APP_SOCIA'
 
 # MARKETING INTERACTION: List of attributes that the input file must include
-I_FIELDS_APP_INSTALLED = [I_PRIMER_NOMBRE, I_APE_PATERNO, I_TEL_MOVIL, I_APP_TOKEN, I_MOBILE_APP]
+I_FIELDS_APP_INSTALLED = [I_PRIMER_NOMBRE, I_APE_PATERNO, I_TEL_MOVIL, I_FLAG_APP_CONS, I_TOKEN_APP_CONS,
+                          I_FLAG_APP_SOCIA, I_TOKEN_APP_SOCIA]
 
 # MARKETING INTERACTION: Attribute names used to store al info of the Marketing Interaction
 O_COMM_MEDIUM = 'COMM_MEDIUM'

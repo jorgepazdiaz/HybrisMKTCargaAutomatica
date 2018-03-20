@@ -44,8 +44,13 @@ def get_timestamp_str():
     return '/Date({})/'.format(str(round(time.time(), 3)).replace('.', ''))
 
 
+def get_timestamp_from_date_str(date_to_parse):
+    result = str(time.mktime(datetime.datetime.strptime(date_to_parse, "%Y%m%d").timetuple())).replace('.', '00')
+    return '/Date({})/'.format(result)
+
+
 # Precondición: el contacto tiene todas los datos completos con las claves correctas
-def transform_contacts(values):
+def transform_contacts(values, business_objects):
     to_import = []
     for row in values.values():
         to_odata = {}
@@ -55,11 +60,21 @@ def transform_contacts(values):
                 to_odata[ODATA_CONTACT_MAPPING[key]] = str(row[key])
             elif key in [O_DATE_OF_BIRTH]:
                 # Modificación de fecha
-                to_odata[ODATA_CONTACT_MAPPING[key]] = '/Date({})/'.format(row[key])
+                to_odata[ODATA_CONTACT_MAPPING[key]] = get_timestamp_from_date_str(row[key])
             else:
                 to_odata[ODATA_CONTACT_MAPPING[key]] = row[key]
         # Agregado de Timestamp para servicio
         to_odata['Timestamp'] = get_timestamp_str()
+        if to_odata[ODATA_CONTACT_MAPPING[O_ID]] in business_objects[ODATA_INTERACTION]:
+            facets = []
+            for interaction in business_objects[ODATA_INTERACTION][to_odata[ODATA_CONTACT_MAPPING[O_ID]]]:
+                # TODO: parametrizar atributos del facet
+                facets.append({
+                    'Id': interaction[O_ID],
+                    'IdOrigin': interaction[O_ID_ORIGIN],
+                    'Timestamp': get_timestamp_str()
+                })
+            to_odata['Facets'] = facets
         to_import.append(to_odata)
     return to_import
 
@@ -97,7 +112,7 @@ def transform_business_objects(business_objects):
     result = {}
     for bo, values in business_objects.items():
         if bo == ODATA_CONTACT:
-            result[bo] = transform_contacts(values)
+            result[bo] = transform_contacts(values, business_objects)
         elif bo == ODATA_CAMPANA_CONSULTORA:
             result[bo] = transform_campanas_consultora(values)
         elif bo == ODATA_INTERACTION:
@@ -160,22 +175,20 @@ class ODataAccess:
         # Invocación de servicio en batch: se separa por entidad para tener mayor control de errores
         for bo_name, bo_values in new_bo.items():
             # Se descartan las interacciones porque se suben en conjunto con los contactos
-            if bo_name != ODATA_INTERACTION:
+            if bo_name not in [ODATA_INTERACTION, ODATA_CAMPANA_CONSULTORA]:
                 logging.info('ODataAccess - post_data - {}: Sending posts'.format(bo_name))
                 print('ODATA - {}: Sending posts'.format(bo_name))
                 last_index = 0
                 batch_size = 1
                 if bo_name == ODATA_CONTACT:
                     batch_size = ODATA_BATCH_SIZE
-                if bo_name in [ODATA_CONTACT, ODATA_INTERACTION]:
                     post_url = ODATA_BASE_URL + ODATA_POST_IMPORT_HEADERS
-                # TODO: poner la URL que corresponde a CampanasConsultora
                 elif bo_name == ODATA_CAMPANA_CONSULTORA:
                     post_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA
                 while last_index < len(bo_values):
                     # Si no existe la sesión o expiró el CSRF token, solicitar uno nuevo
-                    if not self.session and self.session_created_at + datetime.timedelta(minutes=ODATA_SESSION_MAX_TTL) < \
-                            datetime.datetime.now():
+                    if not self.session and self.session_created_at + datetime.timedelta(minutes=ODATA_SESSION_MAX_TTL)\
+                            < datetime.datetime.now():
                         logging.info('ODataAccess - post_data - Session expired: Getting new csrf-token')
                         print('ODATA - {}: Getting new CSRF-TOKEN'.format(bo_name))
                         self.get_csrf_token()
@@ -261,4 +274,3 @@ class ODataAccess:
                     last_index += batch_size
                 print("ODATA - {}: Finished".format(bo_name))
             # TODO: logoff sap/public/bc/icf/logoff
-        print(new_bo)

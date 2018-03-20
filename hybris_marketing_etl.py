@@ -205,60 +205,80 @@ def generate_interactions(interactions, contacts):
     interactions_to_discard = {}
     read_counter = 0
     for row in interactions:
-        interaction = {}
         read_counter += 1
+        # Chequea las aplicaciones instaladas
+        apps_installed = []
+        if row[I_FLAG_APP_CONS] == '1':
+            apps_installed.append(I_FLAG_APP_CONS)
+        if row[I_FLAG_APP_SOCIA] == '1':
+            apps_installed.append(I_FLAG_APP_SOCIA)
         try:
             for key in I_FIELDS_APP_INSTALLED:
                 if key not in row.keys():
                     raise Exception(MSG_INPUT_ERROR.format(key, row.items()))
-
             contact_id = str(int(row[I_COD_EBELISTA])) + '_' + str(row[I_COD_PAIS])
-
-            interaction[O_ID_ORIGIN] = format_text(I_MOBILE_APP, row)
-            interaction[O_COMM_MEDIUM] = 'MOBILE_APP'
-            interaction[O_IA_TYPE] = 'MOB_APP_INSTALLED'
-            interaction[O_DEVICE_TYPE] = 'PHONE'
-            interaction[O_TIMESTAMP] = datetime.strftime(datetime.utcnow(), '%Y%m%d%H%M%S')
-            interaction[O_ID] = format_text(I_APP_TOKEN, row)
-            interaction[O_NAME_FIRST] = format_text(I_PRIMER_NOMBRE, row)
-            interaction[O_NAME_LAST] = format_text(I_APE_PATERNO, row)
-            interaction[O_TELNR_MOBILE] = format_phone(I_TEL_MOVIL, row)
-
-            if interaction[O_TELNR_MOBILE] != '':
-                match_phone = re.search(PHONE_REGEX, interaction[O_TELNR_MOBILE])
-                if match_phone:
-                    generate_empty_attributes(interaction, O_INTERACTION_FIELDS)
-                    if contact_id in contacts.keys():
-                        interactions_to_write[contact_id] = interaction
+            # Agrega una interacción por aplicación instalada
+            for app in apps_installed:
+                interaction = {}
+                if app == I_FLAG_APP_CONS:
+                    interaction[O_ID_ORIGIN] = APP_CONS_ID_ORIGIN
+                    interaction[O_ID] = format_text(I_TOKEN_APP_CONS, row)
+                elif app == I_FLAG_APP_SOCIA:
+                    interaction[O_ID_ORIGIN] = APP_SOCIA_ID_ORIGIN
+                    interaction[O_ID] = format_text(I_TOKEN_APP_SOCIA, row)
+                interaction[O_COMM_MEDIUM] = 'MOBILE_APP'
+                interaction[O_IA_TYPE] = 'MOB_APP_INSTALLED'
+                interaction[O_DEVICE_TYPE] = 'PHONE'
+                interaction[O_TIMESTAMP] = datetime.strftime(datetime.utcnow(), '%Y%m%d%H%M%S')
+                interaction[O_NAME_FIRST] = format_text(I_PRIMER_NOMBRE, row)
+                interaction[O_NAME_LAST] = format_text(I_APE_PATERNO, row)
+                interaction[O_TELNR_MOBILE] = format_phone(I_TEL_MOVIL, row)
+                if interaction[O_TELNR_MOBILE] != '':
+                    match_phone = re.search(PHONE_REGEX, interaction[O_TELNR_MOBILE])
+                    if match_phone:
+                        generate_empty_attributes(interaction, O_INTERACTION_FIELDS)
+                        if contact_id in contacts.keys():
+                            if contact_id in interactions_to_write:
+                                interactions_to_write[contact_id].append(interaction)
+                            else:
+                                interactions_to_write[contact_id] = [interaction]
+                        else:
+                            raise Exception(MSG_DISCARDED_CONTACT)
                     else:
-                        raise Exception(MSG_DISCARDED_CONTACT)
+                        raise Exception(MSG_INVALID_PHONE)
                 else:
-                    raise Exception(MSG_INVALID_PHONE)
-            else:
-                raise Exception(MSG_EMPTY_PHONE)
+                    raise Exception(MSG_EMPTY_PHONE)
         except Exception as e:
-            discarded = interaction.copy()
-            discarded[O_DISCARD_MOTIVE] = e.args[0]
-            if O_ID_ORIGIN not in discarded.keys():
-                discarded[O_ID_ORIGIN] = str(row[I_MOBILE_APP]).strip()
-            if O_COMM_MEDIUM not in discarded.keys():
-                discarded[O_COMM_MEDIUM] = 'MOBILE_APP'
-            if O_IA_TYPE not in discarded.keys():
-                discarded[O_IA_TYPE] = 'MOB_APP_INSTALLED'
-            if O_DEVICE_TYPE not in discarded.keys():
-                discarded[O_DEVICE_TYPE] = 'PHONE'
-            if O_TIMESTAMP not in discarded.keys():
-                discarded[O_TIMESTAMP] = datetime.strftime(datetime.utcnow(), '%Y%m%d%H%M%S')
-            if O_ID not in discarded.keys():
-                discarded[O_ID] = str(row[I_APP_TOKEN]).strip()
-            if O_NAME_FIRST not in discarded.keys():
-                discarded[O_NAME_FIRST] = str(row[I_PRIMER_NOMBRE]).strip()
-            if O_NAME_LAST not in discarded.keys():
-                discarded[O_NAME_LAST] = str(row[I_APE_PATERNO]).strip()
-            if O_TELNR_MOBILE not in discarded.keys():
-                discarded[O_TELNR_MOBILE] = str(row[I_TEL_MOVIL]).strip()
-            generate_empty_attributes(discarded, O_INTERACTION_FIELDS)
-            interactions_to_discard[contact_id] = discarded
+            # Agrega una interacción por aplicación instalada
+            for app in apps_installed:
+                discarded = {}
+                discarded[O_DISCARD_MOTIVE] = e.args[0]
+                if app == I_FLAG_APP_CONS:
+                    if O_ID_ORIGIN not in discarded.keys():
+                        discarded[O_ID_ORIGIN] = APP_CONS_ID_ORIGIN
+                    if O_ID not in discarded.keys():
+                        discarded[O_ID] = str(row[I_TOKEN_APP_CONS]).strip()
+                elif app == I_FLAG_APP_SOCIA:
+                    if O_ID_ORIGIN not in discarded.keys():
+                        discarded[O_ID_ORIGIN] = APP_SOCIA_ID_ORIGIN
+                    if O_ID not in discarded.keys():
+                        discarded[O_ID] = str(row[I_TOKEN_APP_SOCIA]).strip()
+                if O_COMM_MEDIUM not in discarded.keys():
+                    discarded[O_COMM_MEDIUM] = 'MOBILE_APP'
+                if O_IA_TYPE not in discarded.keys():
+                    discarded[O_IA_TYPE] = 'MOB_APP_INSTALLED'
+                if O_DEVICE_TYPE not in discarded.keys():
+                    discarded[O_DEVICE_TYPE] = 'PHONE'
+                if O_TIMESTAMP not in discarded.keys():
+                    discarded[O_TIMESTAMP] = datetime.strftime(datetime.utcnow(), '%Y%m%d%H%M%S')
+                if O_NAME_FIRST not in discarded.keys():
+                    discarded[O_NAME_FIRST] = str(row[I_PRIMER_NOMBRE]).strip()
+                if O_NAME_LAST not in discarded.keys():
+                    discarded[O_NAME_LAST] = str(row[I_APE_PATERNO]).strip()
+                if O_TELNR_MOBILE not in discarded.keys():
+                    discarded[O_TELNR_MOBILE] = str(row[I_TEL_MOVIL]).strip()
+                generate_empty_attributes(discarded, O_INTERACTION_FIELDS)
+                interactions_to_discard[contact_id] = discarded
     print('GENERAL - Lines read: {}'.format(read_counter))
     return interactions_to_write, interactions_to_discard
 
@@ -730,8 +750,10 @@ def belcorp_csv_to_hm_odata(source_folder, source_file):
     with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
         print('{} - Required fields: {}'.format(PREFIX_CONTACT, I_FIELDS_CONTACT))
         reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
-    contacts_to_write, contacts_to_discard = generate_contacts(reader)
-    interactions_to_write, interactions_to_discard = generate_interactions(reader, contacts_to_write)
+        contacts_to_write, contacts_to_discard = generate_contacts(reader)
+        # Resetea la lectura del archivo para tomar las interacciones
+        ifile.seek(0)
+        interactions_to_write, interactions_to_discard = generate_interactions(reader, contacts_to_write)
     # output_file = os.path.join(output_folder, PREFIX_CONTACT + '_' + source_file)
     # write_output_file(output_file, contacts_to_write, type=PREFIX_CONTACT, discard=False)
     # write_output_file(output_file, contacts_to_discard, type=PREFIX_CONTACT, discard=True)
@@ -755,6 +777,6 @@ def belcorp_csv_to_hm_odata(source_folder, source_file):
 
 # def main():
 # if _name_ == "_main_":
-belcorp_csv_to_hm_csv(SOURCE_FOLDER, SOURCE_FILE, OUTPUT_FOLDER)
+# belcorp_csv_to_hm_csv(SOURCE_FOLDER, SOURCE_FILE, OUTPUT_FOLDER)
 # belcorp_sql_to_hm_csv(OUTPUT_FOLDER)
-# belcorp_csv_to_hm_odata(SOURCE_FOLDER, SOURCE_FILE)
+belcorp_csv_to_hm_odata(SOURCE_FOLDER, SOURCE_FILE)

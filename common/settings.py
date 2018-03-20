@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # INPUT SETTINGS
-SOURCE_FOLDER = 'C:\\Users\Daniel.Callejas\Desktop\DEMO BELCORP ETL\ARCHIVOS BELCORP'
-SOURCE_FILE = 'PRUEBA_BelcorpArgentina_InPut_HM_20180313.csv'
-OUTPUT_FOLDER = 'C:\\Users\Daniel.Callejas\Desktop\DEMO BELCORP ETL\ARCHIVOS HYBRIS MARKETING'
+SOURCE_FOLDER = '/Users/bruno/Downloads/IDATHA/Belcorp/ETL'
+SOURCE_FILE = 'BelcorpCostaRica_InPut_HM_20180309.csv'
+OUTPUT_FOLDER = '/Users/bruno/Downloads/IDATHA/Belcorp/ETL'
 SOURCE_ENCODING = 'utf8'
 SOURCE_DELIMITER = ','
 
