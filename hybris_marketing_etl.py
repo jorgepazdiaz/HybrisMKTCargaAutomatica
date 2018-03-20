@@ -3,6 +3,12 @@ import csv
 import math
 import decimal
 import re
+import os
+import json
+import logging
+import logging.handlers
+import argparse
+import sys
 from datetime import datetime
 from common.settings import *
 from common.messages import *
@@ -14,7 +20,6 @@ from validate_email import validate_email
 from dal.dal import SqlServerAccess, ODataAccess
 from dal.queries.virtual_coach_consultoras import VIRTUAL_COACH_CONSULTORAS_QUERY
 from dal.conn_credentials import SQL_SERVER, SQL_DB, ODATA_CONTACT, ODATA_INTERACTION, ODATA_CAMPANA_CONSULTORA
-import os
 
 
 def format_date(attribute, row):
@@ -73,9 +78,12 @@ def generate_empty_attributes(item, fields):
 
 
 def write_output_file(output_file, to_write, output_file_type, discard=False):
+    logger = logging.getLogger('{}'.format(LOGGER_NAME))
+    logger.debug('write_output_file - Writing file: {}'.format(output_file))
     if output_file_type not in OUTPUT_FILE_TYPES:
-        msg = 'OUTPUT ERROR - Function argument output file type with value "{}" is not included in \{{}\}'. \
+        msg = 'write_output_file - Function argument output file type with value "{}" is not included in \{{}\}'. \
             format(output_file_type, OUTPUT_FILE_TYPES)
+        logger.error(msg)
         raise Exception(msg)
     elif output_file_type == PREFIX_CONTACT:
         field_names = O_CONTACT_FIELDS
@@ -87,7 +95,7 @@ def write_output_file(output_file, to_write, output_file_type, discard=False):
         field_names = O_CAMPANA_CONSULTORA_FIELDS
         file_header = O_CAMPANA_CONSULTORA_FILE_HEADER
     if discard:
-        print('{} - Writing discarded file: {}'.format(output_file_type, output_file))
+        logger.debug('write_output_file - {} - Writing discarded file: {}'.format(output_file_type, output_file))
         discard_counter = 0
         with open(output_file.replace('.csv', '_DISCARDED.csv'), 'w', encoding="utf8") as ofile:
             field_names.copy()
@@ -100,16 +108,16 @@ def write_output_file(output_file, to_write, output_file_type, discard=False):
                 discard_counter += 1
             ofile.flush()
             ofile.close()
-        print('{} - Lines discarded: {}'.format(output_file_type, discard_counter))
+        logger.info('write_output_file - {} - Lines discarded: {}'.format(output_file_type, discard_counter))
     else:
-        print('{} - Writing output file(s): {}'.format(output_file_type, output_file))
-        print('{} - Output fields: {}'.format(output_file_type, field_names))
+        logger.debug('write_output_file - {} - Writing output file(s): {}'.format(output_file_type, output_file))
+        logger.debug('write_output_file - {} - Output fields: {}'.format(output_file_type, field_names))
         write_counter = 0
         max_files = int(math.ceil(len(to_write.values()) / BATCH_SIZE))
         to_write_values = list(to_write.values())
         for file_number in range(max_files):
             parcial_output_file = output_file.replace('.csv', '_{}.csv'.format(file_number))
-            print('{} - Processing output file: {}'.format(output_file_type, parcial_output_file))
+            logger.debug('write_output_file - {} - Processing output file: {}'.format(output_file_type, parcial_output_file))
             with open(parcial_output_file, 'w', encoding='utf8') as ofile:
                 ofile.write(file_header)
                 writer = csv.DictWriter(ofile, fieldnames=field_names, lineterminator='\n', delimiter=';')
@@ -121,10 +129,12 @@ def write_output_file(output_file, to_write, output_file_type, discard=False):
                     write_counter += 1
                 ofile.flush()
                 ofile.close()
-        print('{} - Lines written: {}'.format(output_file_type, write_counter))
+        logger.info('write_output_file - {} - Lines written: {}'.format(output_file_type, write_counter))
 
 
 def generate_contacts(contacts):
+    logger = logging.getLogger('{}'.format(LOGGER_NAME))
+    logger.debug('generate_contacts - Processing input')
     contacts_to_write = {}
     contacts_to_discard = {}
     read_counter = 0
@@ -196,11 +206,15 @@ def generate_contacts(contacts):
                 contact[O_ID_ORIGIN] = 'SAP_ODATA_IMPORT'
             generate_empty_attributes(discarded, O_CONTACT_FIELDS)
             contacts_to_discard[contact[O_ID]] = discarded
-    print('GENERAL - Lines read: {}'.format(read_counter))
+            logger.error('generate_interactions - Discarded {}: {}'.format(discarded[O_DISCARD_MOTIVE], json.dumps(row)))
+    logger.info('generate_interactions - Lines read: {} - To write: {} - Discarded: {}'.
+                format(read_counter, len(contacts_to_write), len(contacts_to_discard)))
     return contacts_to_write, contacts_to_discard
 
 
 def generate_interactions(interactions, contacts):
+    logger = logging.getLogger('{}'.format(LOGGER_NAME))
+    logger.debug('generate_interactions - Processing input')
     interactions_to_write = {}
     interactions_to_discard = {}
     read_counter = 0
@@ -279,11 +293,15 @@ def generate_interactions(interactions, contacts):
                     discarded[O_TELNR_MOBILE] = str(row[I_TEL_MOVIL]).strip()
                 generate_empty_attributes(discarded, O_INTERACTION_FIELDS)
                 interactions_to_discard[contact_id] = discarded
-    print('GENERAL - Lines read: {}'.format(read_counter))
+            logger.error('generate_interactions - Discarded {}: {}'.format(discarded[O_DISCARD_MOTIVE], json.dumps(row)))
+    logger.info('generate_interactions - Lines read: {} - To write: {} - Discarded: {}'.
+                format(read_counter, len(interactions_to_write), len(interactions_to_discard)))
     return interactions_to_write, interactions_to_discard
 
 
 def generate_campanas_consultoras(campanas_consultoras, contacts):
+    logger = logging.getLogger('{}'.format(LOGGER_NAME))
+    logger.debug('generate_campanas_consultoras - Processing input')
     campanas_consultoras_to_write = {}
     campanas_consultoras_to_discard = {}
     read_counter = 0
@@ -294,6 +312,7 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
         try:
             for key in I_FIELDS_CAMPANAS_CONSULTORA:
                 if key not in row.keys():
+                    logger.error(MSG_INPUT_ERROR.format(key, row.items()))
                     raise Exception(MSG_INPUT_ERROR.format(key, row.items()))
                 else:
                     discarded[key] = row[key]
@@ -666,16 +685,19 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
                 discarded[O_LINK_OFERTAS] = row[I_LINK_OFERTAS]
             if O_COD_EBELISTA not in discarded.keys():
                 discarded[O_COD_EBELISTA] = str(row[I_COD_EBELISTA]).strip() + '_' + \
-                                            str(campana_consultora[O_COD_PAIS])
+                                            str(row[I_COD_PAIS]).strip()
             if O_ID_CAMPANA_CONSULTORA not in discarded.keys():
-                discarded[O_ID_CAMPANA_CONSULTORA] = str(row[O_ANIO_CAMPANA_EXPOSICION]) + \
-                                                     str(row[O_NRO_CAMPANA_EXPOSICION]).zfill(2) + '_' + \
-                                                     str(row[O_COD_EBELISTA])
+                discarded[O_ID_CAMPANA_CONSULTORA] = str(row[I_ANIO_CAMPANA_EXPOSICION][0:4]).strip() + \
+                                                     str(row[I_ANIO_CAMPANA_EXPOSICION][4:6]).strip().zfill(2) + '_' + \
+                                                     str(row[I_COD_EBELISTA]).strip() + '_' + \
+                                                     str(row[I_COD_PAIS]).strip()
             if O_IDORIGIN not in discarded.keys():
                 discarded[O_IDORIGIN] = 'SAP_ODATA_IMPORT'
             generate_empty_attributes(discarded, O_CAMPANA_CONSULTORA_FIELDS)
             campanas_consultoras_to_discard[discarded[O_ID_CAMPANA_CONSULTORA]] = discarded
-    print('GENERAL - Lines read: {}'.format(read_counter))
+            logger.error('generate_campanas_consultoras - Discarded {}: {}'.format(discarded[O_DISCARD_MOTIVE], json.dumps(row)))
+    logger.info('generate_campanas_consultoras - Lines read: {} - To write: {} - Discarded: {}'.
+                format(read_counter, len(campanas_consultoras_to_write), len(campanas_consultoras_to_discard)))
     return campanas_consultoras_to_write, campanas_consultoras_to_discard
 
 
@@ -754,18 +776,12 @@ def belcorp_csv_to_hm_odata(source_folder, source_file):
         # Resetea la lectura del archivo para tomar las interacciones
         ifile.seek(0)
         interactions_to_write, interactions_to_discard = generate_interactions(reader, contacts_to_write)
-    # output_file = os.path.join(output_folder, PREFIX_CONTACT + '_' + source_file)
-    # write_output_file(output_file, contacts_to_write, type=PREFIX_CONTACT, discard=False)
-    # write_output_file(output_file, contacts_to_discard, type=PREFIX_CONTACT, discard=True)
     with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
         print('{} - Required fields: {}'.format(PREFIX_CAMPANA_CONSULTORA, I_FIELDS_CAMPANAS_CONSULTORA))
         reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
         campanas_consultoras_to_write, campanas_consultoras_to_discard = generate_campanas_consultoras(reader,
                                                                                                        contacts_to_write)
-    # output_file = os.path.join(output_folder, PREFIX_CAMPANA_CONSULTORA + '_' + source_file)
-    # write_output_file(output_file, campanas_consultoras_to_write, type=PREFIX_CAMPANA_CONSULTORA, discard=False)
-    # write_output_file(output_file, campanas_consultoras_to_discard, type=PREFIX_CAMPANA_CONSULTORA, discard=True)
-    # Invocación al servicio OData
+
     odata_access = ODataAccess()
     business_objects = {
         ODATA_CONTACT: contacts_to_write,
@@ -775,8 +791,62 @@ def belcorp_csv_to_hm_odata(source_folder, source_file):
     odata_access.post_data(business_objects)
 
 
-# def main():
-# if _name_ == "_main_":
-# belcorp_csv_to_hm_csv(SOURCE_FOLDER, SOURCE_FILE, OUTPUT_FOLDER)
-# belcorp_sql_to_hm_csv(OUTPUT_FOLDER)
-belcorp_csv_to_hm_odata(SOURCE_FOLDER, SOURCE_FILE)
+def belcorp_sql_to_odata():
+    logger = logging.getLogger(LOGGER_NAME)
+    logger.info('belcorp_sql_to_odata - Starting')
+    sql_access = SqlServerAccess()
+    conn = sql_access.connect()
+    logger.debug('Executing query: {}'.format(VIRTUAL_COACH_CONSULTORAS_QUERY))
+    cursor = conn.cursor()
+    cursor.execute(VIRTUAL_COACH_CONSULTORAS_QUERY)
+    columns = [column[0] for column in cursor.description]
+    query_result = []
+    for row in cursor.fetchall():
+        query_result.append(dict(zip(columns, row)))
+    logger.info('Rows retrieved: {}'.format(len(query_result)))
+
+    logger.debug('{} - Required fields: {}'.format(PREFIX_CONTACT, I_FIELDS_CONTACT))
+    contacts_to_write, contacts_to_discard = generate_contacts(query_result)
+
+    logger.debug('{} - Required fields: {}'.format(PREFIX_CAMPANA_CONSULTORA, I_FIELDS_CAMPANAS_CONSULTORA))
+    campanas_consultoras_to_write, campanas_consultoras_to_discard = generate_campanas_consultoras(query_result,
+                                                                                                   contacts_to_write)
+    odata_access = ODataAccess()
+    business_objects = {
+        ODATA_CONTACT: contacts_to_write,
+        #ODATA_INTERACTION: interactions_to_write,
+        ODATA_CAMPANA_CONSULTORA: campanas_consultoras_to_write
+    }
+    odata_access.post_data(business_objects)
+
+
+def init_logging():
+    logger = logging.getLogger(LOGGER_NAME)
+    logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s[%(name)s] - %(message)s')
+    # INFO Handler
+    fh = logging.handlers.TimedRotatingFileHandler(LOGGING_FILE + '_INFO', when='midnight')
+    fh.setLevel(logging.INFO)
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
+    # DEBUG Handler
+    dh = logging.handlers.TimedRotatingFileHandler(LOGGING_FILE + '_DEBUG', when='midnight')
+    dh.setLevel(logging.DEBUG)
+    dh.setFormatter(formatter)
+    logger.addHandler(dh)
+    # ERROR Handler
+    eh = logging.handlers.TimedRotatingFileHandler(LOGGING_FILE + '_ERROR', when='midnight')
+    eh.setLevel(logging.ERROR)
+    eh.setFormatter(formatter)
+    logger.addHandler(eh)
+    # STREAM Handler
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.ERROR)
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
+
+if __name__ == '__main__':
+    init_logging()
+    belcorp_sql_to_odata()
+
