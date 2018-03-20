@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 # INPUT SETTINGS
 SOURCE_FOLDER = 'C:\\Users\Daniel.Callejas\Desktop\DEMO BELCORP ETL\ARCHIVOS BELCORP'
-SOURCE_FILE = 'PRUEBA_BelcorpArgentina_InPut_HM_20180313.csv'
+SOURCE_FILE = 'SHORT_PRUEBA_BelcorpBrasil_InPut_HM_20180313.csv'
 OUTPUT_FOLDER = 'C:\\Users\Daniel.Callejas\Desktop\DEMO BELCORP ETL\ARCHIVOS HYBRIS MARKETING'
 SOURCE_ENCODING = 'utf8'
 SOURCE_DELIMITER = ','
 
 # OUTPUT SETTINGS
-# MODE = 'PRODUCTIVE'
-MODE = 'TEST'
+MODE = 'PRODUCTIVE'
+# MODE = 'TEST'
 TEST_MAIL = 'brunoo.gonzalez+{}@gmail.com'
 BATCH_SIZE = 4500
 PREFIX_CONTACT = 'Contacts'
@@ -23,4 +23,5 @@ PHONE_REGEX = '^\+\d{11}$'
 LOCAL_PART_REGEX = '^[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&*+-/=?^_`''{|}~\.]+$'
 
 # LOGGING
-LOG_FILE_DAL = 'dal.dal.log'
+LOGGER_NAME = 'hybris_marketing_etl'
+LOGGING_FILE = 'C:\IDATHA\PYXIS\BELCORP - Hybris Marketing\BELCORP - Hybris Marketing ETL\hm_dataload\logs\hybris_marketing_etl'
