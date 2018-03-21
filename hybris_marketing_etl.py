@@ -8,7 +8,6 @@ import json
 import logging
 import logging.handlers
 import argparse
-import sys
 from datetime import datetime
 from common.settings import *
 from common.messages import *
@@ -19,7 +18,7 @@ from mapping.interactions import *
 from validate_email import validate_email
 from dal.dal import SqlServerAccess, ODataAccess
 from dal.queries.virtual_coach_consultoras import VIRTUAL_COACH_CONSULTORAS_QUERY
-from dal.conn_credentials import SQL_SERVER, SQL_DB, ODATA_CONTACT, ODATA_INTERACTION, ODATA_CAMPANA_CONSULTORA
+from dal.conn_credentials import ODATA_CONTACT, ODATA_INTERACTION, ODATA_CAMPANA_CONSULTORA
 
 
 def format_date(attribute, row):
@@ -78,24 +77,24 @@ def generate_empty_attributes(item, fields):
 
 
 def write_output_file(output_file, to_write, output_file_type, discard=False):
-    logger = logging.getLogger('{}'.format(LOGGER_NAME))
-    logger.debug('write_output_file - Writing file: {}'.format(output_file))
+    logger = logging.getLogger('{}.write_output_file'.format(LOGGER_NAME))
+    logger.debug('Writing file: {}'.format(output_file))
     if output_file_type not in OUTPUT_FILE_TYPES:
-        msg = 'write_output_file - Function argument output file type with value "{}" is not included in \{{}\}'. \
-            format(output_file_type, OUTPUT_FILE_TYPES)
+        msg = 'Function argument output file type with value "{}" is not included in \{{}\}'.format(output_file_type,
+                                                                                                    OUTPUT_FILE_TYPES)
         logger.error(msg)
         raise Exception(msg)
     elif output_file_type == PREFIX_CONTACT:
         field_names = O_CONTACT_FIELDS
         file_header = O_CONTACT_FILE_HEADER
-    elif output_file_type == PREFIX_APP_INSTALLED:
+    elif output_file_type == PREFIX_INTERACTION:
         field_names = O_INTERACTION_FIELDS
         file_header = O_INTERACTION_FILE_HEADER
     elif output_file_type == PREFIX_CAMPANA_CONSULTORA:
         field_names = O_CAMPANA_CONSULTORA_FIELDS
         file_header = O_CAMPANA_CONSULTORA_FILE_HEADER
     if discard:
-        logger.debug('write_output_file - {} - Writing discarded file: {}'.format(output_file_type, output_file))
+        logger.debug('{} - Writing discarded file: {}'.format(output_file_type, output_file))
         discard_counter = 0
         with open(output_file.replace('.csv', '_DISCARDED.csv'), 'w', encoding="utf8") as ofile:
             field_names.copy()
@@ -108,16 +107,16 @@ def write_output_file(output_file, to_write, output_file_type, discard=False):
                 discard_counter += 1
             ofile.flush()
             ofile.close()
-        logger.info('write_output_file - {} - Lines discarded: {}'.format(output_file_type, discard_counter))
+        logger.info('{} - Lines discarded: {}'.format(output_file_type, discard_counter))
     else:
-        logger.debug('write_output_file - {} - Writing output file(s): {}'.format(output_file_type, output_file))
-        logger.debug('write_output_file - {} - Output fields: {}'.format(output_file_type, field_names))
+        logger.debug('{} - Writing output file(s): {}'.format(output_file_type, output_file))
+        logger.debug('{} - Output fields: {}'.format(output_file_type, field_names))
         write_counter = 0
         max_files = int(math.ceil(len(to_write.values()) / BATCH_SIZE))
         to_write_values = list(to_write.values())
         for file_number in range(max_files):
             parcial_output_file = output_file.replace('.csv', '_{}.csv'.format(file_number))
-            logger.debug('write_output_file - {} - Processing output file: {}'.format(output_file_type, parcial_output_file))
+            logger.debug('{} - Processing output file: {}'.format(output_file_type, parcial_output_file))
             with open(parcial_output_file, 'w', encoding='utf8') as ofile:
                 ofile.write(file_header)
                 writer = csv.DictWriter(ofile, fieldnames=field_names, lineterminator='\n', delimiter=';')
@@ -129,12 +128,13 @@ def write_output_file(output_file, to_write, output_file_type, discard=False):
                     write_counter += 1
                 ofile.flush()
                 ofile.close()
-        logger.info('write_output_file - {} - Lines written: {}'.format(output_file_type, write_counter))
+        logger.info('{} - Lines written: {}'.format(output_file_type, write_counter))
 
 
 def generate_contacts(contacts):
-    logger = logging.getLogger('{}'.format(LOGGER_NAME))
-    logger.debug('generate_contacts - Processing input')
+    logger = logging.getLogger('{}.generate_contacts'.format(LOGGER_NAME))
+    logger.debug('Processing input')
+    logger.debug('Required fields: {}'.format(I_FIELDS_CONTACT))
     contacts_to_write = {}
     contacts_to_discard = {}
     read_counter = 0
@@ -144,14 +144,14 @@ def generate_contacts(contacts):
         try:
             for key in I_FIELDS_CONTACT:
                 if key not in row.keys():
-                    raise ValueError(MSG_INPUT_ERROR.format(key, row.items()))
+                    raise ValueError(MSG_INPUT_ERROR.format(key))
             contact[O_ID] = str(int(row[I_COD_EBELISTA])) + '_' + str(row[I_COD_PAIS])
             contact[O_NAME_FIRST] = format_text(I_PRIMER_NOMBRE, row)
             contact[O_NAME_LAST] = format_text(I_APE_PATERNO, row)
             contact[O_COUNTRY_FT] = format_text(I_DESC_PAIS, row)
             if MODE == 'PRODUCTIVE':
                 contact[O_SMTP_ADDR] = str(row[I_CORREO_ELECTRONICO]).strip()
-                # Debido a que datos enviados no cumlpen con formato no se carga este atributo
+                # TODO: modificar cuando confirme que se realizarán los controles correspondientes en los datos fuente
                 # contact[O_TELNR_MOBILE] = format_phone(I_TEL_MOVIL, row)
             else:
                 contact[O_SMTP_ADDR] = TEST_MAIL.format(read_counter + 1)
@@ -166,7 +166,9 @@ def generate_contacts(contacts):
             # Email & phone Validation
             is_valid_phone = re.search(PHONE_REGEX, contact[O_TELNR_MOBILE])
             is_valid_mail = validate_email(contact[O_SMTP_ADDR])
-            if contact[O_SMTP_ADDR] == '':
+            if contact[O_SMTP_ADDR] == '' and contact[O_TELNR_MOBILE] == '':
+                raise ValueError(MSG_NO_CONTACT_INFO)
+            elif contact[O_SMTP_ADDR] == '':
                 raise ValueError(MSG_EMPTY_MAIL)
             elif contact[O_SMTP_ADDR] != '':
                 if not is_valid_mail:
@@ -206,30 +208,33 @@ def generate_contacts(contacts):
                 contact[O_ID_ORIGIN] = 'SAP_ODATA_IMPORT'
             generate_empty_attributes(discarded, O_CONTACT_FIELDS)
             contacts_to_discard[contact[O_ID]] = discarded
-            logger.error('generate_interactions - Discarded {}: {}'.format(discarded[O_DISCARD_MOTIVE], json.dumps(row)))
-    logger.info('generate_interactions - Lines read: {} - To write: {} - Discarded: {}'.
+            for key in row.keys():
+                row[key] = str(row[key])
+            logger.error('Discarded {}: {}'.format(discarded[O_DISCARD_MOTIVE], json.dumps(row)))
+    logger.info('Lines read: {} - To write: {} - Discarded: {}'.
                 format(read_counter, len(contacts_to_write), len(contacts_to_discard)))
     return contacts_to_write, contacts_to_discard
 
 
 def generate_interactions(interactions, contacts):
-    logger = logging.getLogger('{}'.format(LOGGER_NAME))
-    logger.debug('generate_interactions - Processing input')
+    logger = logging.getLogger('{}.generate_interactions'.format(LOGGER_NAME))
+    logger.debug('Processing input')
+    logger.debug('Required fields: {}'.format(I_FIELDS_APP_INSTALLED))
     interactions_to_write = {}
     interactions_to_discard = {}
     read_counter = 0
     for row in interactions:
-        read_counter += 1
-        # Chequea las aplicaciones instaladas
-        apps_installed = []
-        if row[I_FLAG_APP_CONS] == '1':
-            apps_installed.append(I_FLAG_APP_CONS)
-        if row[I_FLAG_APP_SOCIA] == '1':
-            apps_installed.append(I_FLAG_APP_SOCIA)
         try:
+            apps_installed = []
+            read_counter += 1
             for key in I_FIELDS_APP_INSTALLED:
                 if key not in row.keys():
-                    raise Exception(MSG_INPUT_ERROR.format(key, row.items()))
+                    raise Exception(MSG_INPUT_ERROR.format(key))
+            # Chequea las aplicaciones instaladas
+            if row[I_FLAG_APP_CONS] == '1':
+                apps_installed.append(I_FLAG_APP_CONS)
+            if row[I_FLAG_APP_SOCIA] == '1':
+                apps_installed.append(I_FLAG_APP_SOCIA)
             contact_id = str(int(row[I_COD_EBELISTA])) + '_' + str(row[I_COD_PAIS])
             # Agrega una interacción por aplicación instalada
             for app in apps_installed:
@@ -293,15 +298,18 @@ def generate_interactions(interactions, contacts):
                     discarded[O_TELNR_MOBILE] = str(row[I_TEL_MOVIL]).strip()
                 generate_empty_attributes(discarded, O_INTERACTION_FIELDS)
                 interactions_to_discard[contact_id] = discarded
-            logger.error('generate_interactions - Discarded {}: {}'.format(discarded[O_DISCARD_MOTIVE], json.dumps(row)))
-    logger.info('generate_interactions - Lines read: {} - To write: {} - Discarded: {}'.
+            for key in row.keys():
+                row[key] = str(row[key])
+            logger.error('Discarded {}: {}'.format(e.args[0], json.dumps(row)))
+    logger.info('Lines read: {} - To write: {} - Discarded: {}'.
                 format(read_counter, len(interactions_to_write), len(interactions_to_discard)))
     return interactions_to_write, interactions_to_discard
 
 
 def generate_campanas_consultoras(campanas_consultoras, contacts):
-    logger = logging.getLogger('{}'.format(LOGGER_NAME))
-    logger.debug('generate_campanas_consultoras - Processing input')
+    logger = logging.getLogger('{}.generate_campanas_consultoras'.format(LOGGER_NAME))
+    logger.debug('Processing input')
+    logger.debug('Required fields: {}'.format(I_FIELDS_CAMPANAS_CONSULTORA))
     campanas_consultoras_to_write = {}
     campanas_consultoras_to_discard = {}
     read_counter = 0
@@ -312,8 +320,7 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
         try:
             for key in I_FIELDS_CAMPANAS_CONSULTORA:
                 if key not in row.keys():
-                    logger.error(MSG_INPUT_ERROR.format(key, row.items()))
-                    raise Exception(MSG_INPUT_ERROR.format(key, row.items()))
+                    raise Exception(MSG_INPUT_ERROR.format(key))
                 else:
                     discarded[key] = row[key]
 
@@ -498,8 +505,8 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
                 campana_consultora[O_SCORE_CATEGORIA] = format_decimal(I_SCORE_CATEGORIA, row, minimum=0.0, maximum=1.0)
                 campana_consultora[O_SCORE_TOP] = format_decimal(I_SCORE_TOP, row, minimum=0.0, maximum=1.0)
                 campana_consultora[O_SCORE_LANZAMIENTO] = \
-                    format_decimal(I_SCORE_LANZAMIENTO, row, minimum=0.0, maximum=1000.0)
-                campana_consultora[O_SCORE_VISITAS] = format_decimal(I_SCORE_VISITAS, row, minimum=0.0, maximum=1000.0)
+                    format_decimal(I_SCORE_LANZAMIENTO, row, minimum=0.0, maximum=1.0)
+                campana_consultora[O_SCORE_VISITAS] = format_decimal(I_SCORE_VISITAS, row, minimum=0.0, maximum=1.0)
                 campana_consultora[O_SCORE_TIP_GESTION_DIGITAL] = \
                     format_decimal(I_SCORE_TIP_GESTION_DIGITAL, row, minimum=0.0, maximum=1.0)
                 campana_consultora[O_SCORE_TIP_COBRANZA] = \
@@ -695,129 +702,81 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
                 discarded[O_IDORIGIN] = 'SAP_ODATA_IMPORT'
             generate_empty_attributes(discarded, O_CAMPANA_CONSULTORA_FIELDS)
             campanas_consultoras_to_discard[discarded[O_ID_CAMPANA_CONSULTORA]] = discarded
-            logger.error('generate_campanas_consultoras - Discarded {}: {}'.format(discarded[O_DISCARD_MOTIVE], json.dumps(row)))
-    logger.info('generate_campanas_consultoras - Lines read: {} - To write: {} - Discarded: {}'.
+            for key in row.keys():
+                row[key] = str(row[key])
+            logger.error('Discarded {}: {}'.format(discarded[O_DISCARD_MOTIVE], json.dumps(row)))
+    logger.info('Lines read: {} - To write: {} - Discarded: {}'.
                 format(read_counter, len(campanas_consultoras_to_write), len(campanas_consultoras_to_discard)))
     return campanas_consultoras_to_write, campanas_consultoras_to_discard
 
 
-def belcorp_csv_to_hm_csv(source_folder, source_file, output_folder):
+def from_csv(input):
+    logger = logging.getLogger('{}.from_csv'.format(LOGGER_NAME))
+    logger.info('Starting')
+    source_folder, source_file = os.path.split(os.path.abspath(input))
     input_file = os.path.join(source_folder, source_file)
-    print('GENERAL - Opening input file: {}'.format(input_file))
-    # CONTACTS
     with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
-        print('{} - Required fields: {}'.format(PREFIX_CONTACT, I_FIELDS_CONTACT))
-        reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
-        contacts_to_write, contacts_to_discard = generate_contacts(reader)
-    output_file = os.path.join(output_folder, PREFIX_CONTACT + '_' + source_file)
-    write_output_file(output_file, contacts_to_write, output_file_type=PREFIX_CONTACT, discard=False)
-    write_output_file(output_file, contacts_to_discard, output_file_type=PREFIX_CONTACT, discard=True)
-    # CAMPANAS_CONSULTORAS
-    with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
-        print('{} - Required fields: {}'.format(PREFIX_CAMPANA_CONSULTORA, I_FIELDS_CAMPANAS_CONSULTORA))
-        reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
-        campanas_consultoras_to_write, campanas_consultoras_to_discard = generate_campanas_consultoras(reader,
-                                                                                                       contacts_to_write)
-    output_file = os.path.join(output_folder, PREFIX_CAMPANA_CONSULTORA + '_' + source_file)
-    write_output_file(output_file, campanas_consultoras_to_write,
-                      output_file_type=PREFIX_CAMPANA_CONSULTORA,
-                      discard=False)
-    write_output_file(output_file, campanas_consultoras_to_discard,
-                      output_file_type=PREFIX_CAMPANA_CONSULTORA,
-                      discard=True)
-    # APP_TOKEN_INTERACTION
-    # with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
-    #     print('{} - Required fields: {}'.format(PREFIX_APP_INSTALLED, I_FIELDS_APP_INSTALLED))
-    #     reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
-    #     interactions_to_write, interactions_to_discard = generate_interactions(reader, contacts_to_write)
-    # output_file = os.path.join(output_folder, PREFIX_APP_INSTALLED)
-    # write_output_file(output_file, interactions_to_write, type=PREFIX_APP_INSTALLED, discard=False)
-    # write_output_file(output_file, interactions_to_discard, type=PREFIX_APP_INSTALLED, discard=True)
-
-
-def belcorp_sql_to_hm_csv(output_folder):
-    print('GENERAL - Connecting to DB {} on server {}'.format(SQL_DB, SQL_SERVER))
-    sql_access = SqlServerAccess()
-    conn = sql_access.connect()
-    cursor = conn.cursor()
-    cursor.execute(VIRTUAL_COACH_CONSULTORAS_QUERY)
-    columns = [column[0] for column in cursor.description]
-    query_result = []
-    for row in cursor.fetchall():
-        query_result.append(dict(zip(columns, row)))
-
-    print('{} - Required fields: {}'.format(PREFIX_CONTACT, I_FIELDS_CONTACT))
-    contacts_to_write, contacts_to_discard = generate_contacts(query_result)
-    output_file = os.path.join(output_folder, PREFIX_CONTACT + '_' + SQL_DB + '_' +
-                               datetime.strftime(datetime.utcnow(), '%Y%m%d_%H%M') + '.csv')
-    write_output_file(output_file, contacts_to_write, output_file_type=PREFIX_CONTACT, discard=False)
-    write_output_file(output_file, contacts_to_discard, output_file_type=PREFIX_CONTACT, discard=True)
-
-    print('{} - Required fields: {}'.format(PREFIX_CAMPANA_CONSULTORA, I_FIELDS_CAMPANAS_CONSULTORA))
-    campanas_consultoras_to_write, campanas_consultoras_to_discard = generate_campanas_consultoras(query_result,
-                                                                                                   contacts_to_write)
-    output_file = os.path.join(output_folder, PREFIX_CAMPANA_CONSULTORA + '_' + SQL_DB + '_' +
-                               datetime.strftime(datetime.utcnow(), '%Y%m%d_%H%M') + '.csv')
-    write_output_file(output_file, campanas_consultoras_to_write,
-                      output_file_type=PREFIX_CAMPANA_CONSULTORA,
-                      discard=False)
-    write_output_file(output_file, campanas_consultoras_to_discard,
-                      output_file_type=PREFIX_CAMPANA_CONSULTORA,
-                      discard=True)
-
-
-def belcorp_csv_to_hm_odata(source_folder, source_file):
-    input_file = os.path.join(source_folder, source_file)
-    print('GENERAL - Opening input file: {}'.format(input_file))
-    with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
-        print('{} - Required fields: {}'.format(PREFIX_CONTACT, I_FIELDS_CONTACT))
         reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
         contacts_to_write, contacts_to_discard = generate_contacts(reader)
         # Resetea la lectura del archivo para tomar las interacciones
         ifile.seek(0)
+        reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
         interactions_to_write, interactions_to_discard = generate_interactions(reader, contacts_to_write)
-    with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
-        print('{} - Required fields: {}'.format(PREFIX_CAMPANA_CONSULTORA, I_FIELDS_CAMPANAS_CONSULTORA))
+        # Resetea la lectura del archivo para tomar las campanas_consultoras
+        ifile.seek(0)
         reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
         campanas_consultoras_to_write, campanas_consultoras_to_discard = generate_campanas_consultoras(reader,
                                                                                                        contacts_to_write)
-
-    odata_access = ODataAccess()
-    business_objects = {
-        ODATA_CONTACT: contacts_to_write,
-        ODATA_INTERACTION: interactions_to_write,
-        ODATA_CAMPANA_CONSULTORA: campanas_consultoras_to_write
-    }
-    odata_access.post_data(business_objects)
+    return contacts_to_write, interactions_to_write, campanas_consultoras_to_write
 
 
-def belcorp_sql_to_odata():
-    logger = logging.getLogger(LOGGER_NAME)
-    logger.info('belcorp_sql_to_odata - Starting')
-    sql_access = SqlServerAccess()
+def from_sql(server, database, user, password):
+    logger = logging.getLogger('{}.from_sql'.format(LOGGER_NAME))
+    logger.info('Starting')
+    sql_access = SqlServerAccess(server, database, user, password)
     conn = sql_access.connect()
-    logger.debug('Executing query: {}'.format(VIRTUAL_COACH_CONSULTORAS_QUERY))
+    # WIN: prefix DB to the query otherwise Invalid Object error
+    query = VIRTUAL_COACH_CONSULTORAS_QUERY.format(database)
+    logger.debug('Executing query: {}'.format(query))
     cursor = conn.cursor()
-    cursor.execute(VIRTUAL_COACH_CONSULTORAS_QUERY)
+    cursor.execute(query)
     columns = [column[0] for column in cursor.description]
     query_result = []
     for row in cursor.fetchall():
         query_result.append(dict(zip(columns, row)))
     logger.info('Rows retrieved: {}'.format(len(query_result)))
-
-    logger.debug('{} - Required fields: {}'.format(PREFIX_CONTACT, I_FIELDS_CONTACT))
     contacts_to_write, contacts_to_discard = generate_contacts(query_result)
-
-    logger.debug('{} - Required fields: {}'.format(PREFIX_CAMPANA_CONSULTORA, I_FIELDS_CAMPANAS_CONSULTORA))
+    interactions_to_write, interactions_to_discard = generate_interactions(query_result, contacts_to_write)
     campanas_consultoras_to_write, campanas_consultoras_to_discard = generate_campanas_consultoras(query_result,
                                                                                                    contacts_to_write)
-    odata_access = ODataAccess()
+    return contacts_to_write, interactions_to_write, campanas_consultoras_to_write
+
+
+def to_odata(contacts, interactions, campanas_consultoras, contact_type):
+    logger = logging.getLogger('{}.to_odata'.format(LOGGER_NAME))
+    logger.info('Starting')
     business_objects = {
-        ODATA_CONTACT: contacts_to_write,
-        #ODATA_INTERACTION: interactions_to_write,
-        ODATA_CAMPANA_CONSULTORA: campanas_consultoras_to_write
+        ODATA_CONTACT: contacts,
+        ODATA_INTERACTION: interactions,
+        ODATA_CAMPANA_CONSULTORA: campanas_consultoras
     }
+    odata_access = ODataAccess(contact_type)
     odata_access.post_data(business_objects)
+
+
+def to_csv(output, contacts, interactions, campanas_consultoras):
+    logger = logging.getLogger('{}.to_csv'.format(LOGGER_NAME))
+    logger.info('Starting')
+    output_folder, output_file = os.path.split(os.path.abspath(output))
+    # CONTACTS
+    file = os.path.join(output_folder, PREFIX_CONTACT + '_' + output_file)
+    write_output_file(file, contacts, output_file_type=PREFIX_CONTACT, discard=False)
+    # CAMPANAS_CONSULTORAS
+    file = os.path.join(output_folder, PREFIX_CAMPANA_CONSULTORA + '_' + output_file)
+    write_output_file(file, campanas_consultoras, output_file_type=PREFIX_CAMPANA_CONSULTORA, discard=False)
+    # INTERACTIONS
+    file = os.path.join(output_folder, PREFIX_INTERACTION + '_' + output_file)
+    write_output_file(file, interactions, output_file_type=PREFIX_INTERACTION, discard=False)
 
 
 def init_logging():
@@ -848,5 +807,81 @@ def init_logging():
 
 if __name__ == '__main__':
     init_logging()
-    belcorp_sql_to_odata()
+    try:
+        parser = argparse.ArgumentParser(description='Belcorp ETL to Hybris Marketing', add_help=False)
+        group = parser.add_mutually_exclusive_group(required=True)
+        # Add arguments
+        group.add_argument('--sql2odata', action='store_true')
+        group.add_argument('--sql2csv', action='store_true')
+        group.add_argument('--csv2csv', action='store_true')
+        group.add_argument('--csv2odata', action='store_true')
 
+        # SQL2ODATA
+        parser_sql2odata = argparse.ArgumentParser(description='sql2odata', add_help=False)
+        parser_sql2odata.add_argument('--sql2odata', action='store_true', required=True)
+        parser_sql2odata.add_argument('-s', '--server', type=str, required=True)
+        parser_sql2odata.add_argument('-d', '--database', type=str, required=True)
+        parser_sql2odata.add_argument('-u', '--user', type=str, required=True)
+        parser_sql2odata.add_argument('-p', '--password', type=str, required=True)
+        parser_sql2odata.add_argument('-c', '--contact_type', type=str, choices=['B2B', 'B2C'], required=True)
+
+        # SQL2CSV
+        parser_sql2csv = argparse.ArgumentParser(description='sql2csv', add_help=False)
+        parser_sql2csv.add_argument('--sql2csv', action='store_true', required=True)
+        parser_sql2csv.add_argument('-s', '--server', type=str, required=True)
+        parser_sql2csv.add_argument('-d', '--database', type=str, required=True)
+        parser_sql2csv.add_argument('-u', '--user', type=str, required=True)
+        parser_sql2csv.add_argument('-p', '--password', type=str, required=True)
+        parser_sql2csv.add_argument('-o', '--output', type=str, required=True)
+
+        # CSV2CSV
+        parser_csv2csv = argparse.ArgumentParser(description='csv2csv', add_help=False)
+        parser_csv2csv.add_argument('--csv2csv', action='store_true', required=True)
+        parser_csv2csv.add_argument('-i', '--input', type=str, required=True)
+        parser_csv2csv.add_argument('-o', '--output', type=str, required=True)
+
+        # CSV2ODATA
+        parser_csv2odata = argparse.ArgumentParser(description='csv2odata', add_help=False)
+        parser_csv2odata.add_argument('--csv2odata', action='store_true', required=True)
+        parser_csv2odata.add_argument('-i', '--input', type=str, required=True)
+        parser_csv2odata.add_argument('-c', '--contact_type', type=str, choices=['B2B', 'B2C'], required=True)
+
+        args, unkwn_args = parser.parse_known_args()
+        if args.csv2csv:
+            args = parser_csv2csv.parse_args()
+            contacts, interactions, campanas_consultoras = from_csv(input=args.input)
+            to_csv(output=args.output, contacts=contacts, interactions=interactions, campanas_consultoras=campanas_consultoras)
+        elif args.sql2csv:
+                args = parser_csv2csv.parse_args()
+                contacts, interactions, campanas_consultoras = from_sql(server=args.server,
+                                                                        database=args.database,
+                                                                        user=args.user,
+                                                                        password=args.password)
+                to_csv(output=args.output, contacts=contacts, interactions=interactions,
+                       campanas_consultoras=campanas_consultoras)
+        elif args.csv2odata:
+            args = parser_sql2odata.parse_args()
+            contacts, interactions, campanas_consultoras = from_csv(input=args.input)
+            to_odata(contacts=contacts,
+                     interactions=interactions,
+                     campanas_consultoras=campanas_consultoras,
+                     contact_type=args.contact_type)
+        elif args.sql2odata:
+            args = parser_sql2odata.parse_args()
+            contacts, interactions, campanas_consultoras = from_sql(server=args.server,
+                                                                    database=args.database,
+                                                                    user=args.user,
+                                                                    password=args.password)
+            to_odata(contacts=contacts,
+                     interactions=interactions,
+                     campanas_consultoras=campanas_consultoras,
+                     contact_type=args.contact_type)
+        else:
+            parser_csv2csv.print_usage()
+            parser_sql2csv.print_usage()
+            parser_csv2odata.print_usage()
+            parser_sql2odata.print_usage()
+    except Exception as e:
+        logger = logging.getLogger(LOGGER_NAME)
+        logger.error(e)
+        raise(e)

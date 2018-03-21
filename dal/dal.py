@@ -12,29 +12,33 @@ import logging
 from dal.conn_credentials import *
 import re
 import os
+import calendar
 
 
 class SqlServerAccess:
 
-    def __init__(self):
-        self.conn = None
+    def __init__(self, server, database, user, password):
         self.logger = logging.getLogger('{}.dal.SqlServerAccess'.format(LOGGER_NAME))
         self.logger.debug('Initializing')
+        self.server = server
+        self.db = database
+        self.usr = user
+        self.pwd = password
+        self.conn = None
 
     def connect(self):
-        self.logger.debug('Connecting to BD {} on server {}'.format(SQL_SERVER, SQL_DB))
+        self.logger.debug('Connecting to BD {} on server {}'.format(self.server, self.db))
         if self.conn is None:
-            conn_string = 'Driver=' + SQL_DRIVER + ';' + \
-                          'Server=' + SQL_SERVER + ';' + \
-                          'Database =' + SQL_DB + ';' + \
-                          'UID=' + SQL_UID + ';' + \
-                          'PWD=' + SQL_PWD + ';' + \
-                          'Trusted_Connection=' + SQL_TRUSTED
+            conn_string = 'DRIVER=' + SQL_DRIVER + ';' + \
+                          'SERVER=' + self.server + ';' + \
+                          'DATABASE =' + self.db + ';' + \
+                          'UID=' + self.usr + ';' + \
+                          'PWD=' + self.pwd
             self.conn = pyodbc.connect(conn_string)
         return self.conn
 
     def close(self):
-        self.logger.debug('Disconnecting from BD {} on server {}'.format(SQL_SERVER, SQL_DB))
+        self.logger.debug('Disconnecting from BD {} on server {}'.format(self.server, self.db))
         if self.conn is not None:
             self.conn.close()
             self.conn = None
@@ -50,12 +54,15 @@ def get_timestamp_str():
 
 
 def get_timestamp_from_date_str(date_to_parse):
-    result = str(time.mktime(datetime.datetime.strptime(date_to_parse, "%Y%m%d").timetuple())).replace('.', '00')
+    try:
+        result = str(time.mktime(datetime.datetime.strptime(date_to_parse, "%Y%m%d").timetuple())).replace('.', '00')
+    except:
+        result = str(calendar.timegm(time.strptime(date_to_parse, '%Y%m%d'))) + '00'
     return '/Date({})/'.format(result)
 
 
 # Precondición: el contacto tiene todas los datos completos con las claves correctas
-def transform_contacts(values, business_objects):
+def transform_contacts(values, business_objects, contact_type):
     to_import = []
     for row in values.values():
         to_odata = {}
@@ -72,6 +79,12 @@ def transform_contacts(values, business_objects):
                 to_odata[ODATA_CONTACT_MAPPING[key]] = row[key]
         # Agregado de Timestamp para servicio
         to_odata['Timestamp'] = get_timestamp_str()
+        # Agregado de tipo de contacto
+        b2b = False
+        if contact_type == 'B2B':
+            b2b = True
+        to_odata['IsContact'] = b2b
+        to_odata['IsConsumer'] = not b2b
         if to_odata[ODATA_CONTACT_MAPPING[O_ID]] in business_objects[ODATA_INTERACTION]:
             facets = []
             for interaction in business_objects[ODATA_INTERACTION][to_odata[ODATA_CONTACT_MAPPING[O_ID]]]:
@@ -114,25 +127,13 @@ def transform_campanas_consultora(values):
     return to_import
 
 
-def transform_business_objects(business_objects):
+def transform_business_objects(business_objects, contact_type):
     result = {}
     for bo, values in business_objects.items():
         if bo == ODATA_CONTACT:
-            result[bo] = transform_contacts(values, business_objects)
+            result[bo] = transform_contacts(values, business_objects, contact_type)
         elif bo == ODATA_CAMPANA_CONSULTORA:
             result[bo] = transform_campanas_consultora(values)
-        elif bo == ODATA_INTERACTION:
-            # result[bo] = transform_interactions(values)
-            pass
-        # TODO: implementar cuando sea necesario
-        elif bo == 'Interests':
-            pass
-        # TODO: implementar cuando sea necesario
-        elif bo == 'Products':
-            pass
-        # TODO: implementar cuando sea necesario
-        elif bo == 'ProductCategories':
-            pass
         else:
             result[bo] = None
     return result
@@ -163,12 +164,13 @@ def generate_batch_json(values):
 
 
 class ODataAccess:
-    def __init__(self):
+    def __init__(self, contact_type):
         self.logger = logging.getLogger('{}.dal.ODataAccess'.format(LOGGER_NAME))
         self.logger.debug('Initializing')
         self.session = None
         self.session_created_at = None
         self.csrf_token = None
+        self.contact_type = contact_type
         self.get_csrf_token()
 
     def get_csrf_token(self):
@@ -204,8 +206,9 @@ class ODataAccess:
             self.logger.error('Logoff error - {} {}'.format(response.status_code, response.reason))
 
     def post_data(self, business_objects):
-        self.logger.debug('Posting data')
-        new_bo = transform_business_objects(business_objects)
+        logger = logging.getLogger('{}.post_data'.format(self.logger.name))
+        logger.debug('Posting data')
+        new_bo = transform_business_objects(business_objects, self.contact_type)
         for bo_name, bo_values in new_bo.items():
             # Se descartan las interacciones porque se suben en conjunto con los contactos
             if bo_name != ODATA_INTERACTION:
@@ -219,11 +222,11 @@ class ODataAccess:
                     post_url = ODATA_BASE_URL + ODATA_POST_IMPORT_HEADERS
                 elif bo_name == ODATA_CAMPANA_CONSULTORA:
                     post_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA
-                self.logger.debug('post_data - object[{}] batch_size[{}] post_url[{}]'.format(bo_name, batch_size,
+                logger.debug('object[{}] batch_size[{}] post_url[{}]'.format(bo_name, batch_size,
                                                                                               post_url))
                 while last_index < len(bo_values):
                     next_index = min(last_index + batch_size, len(bo_values))
-                    self.logger.debug('post_data - processing {}[{}:{}]'.format(bo_name, last_index, next_index))
+                    logger.debug('processing {}[{}:{}]'.format(bo_name, last_index, next_index))
                     time.sleep(ODATA_IDLE_TIME)
                     if not self.session and self.session_created_at + datetime.timedelta(minutes=ODATA_SESSION_MAX_TTL) < \
                             datetime.datetime.now():
@@ -250,21 +253,21 @@ class ODataAccess:
                         headers['content-type'] = 'multipart/mixed;boundary=batch'
                         json_data = generate_batch_json(bo_values[last_index:next_index])
                         post_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA_BATCH
-                    self.logger.debug('post_data - sending POST {}[{}:{}]'.format(bo_name, last_index, next_index))
+                    logger.debug('sending POST {}[{}:{}]'.format(bo_name, last_index, next_index))
                     response = self.session.post(post_url,
                                                  headers=headers,
                                                  auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD),
                                                  data=json_data)
 
                     if bo_name == ODATA_CONTACT and response.status_code == 201:
-                        self.logger.info('post_data - batch {}[{}:{}] successful - {} {}'.
+                        logger.info('batch {}[{}:{}] successful - {} {}'.
                                          format(bo_name, last_index, next_index, response.status_code, response.reason))
                     elif bo_name == ODATA_CAMPANA_CONSULTORA and response.status_code == 202:
-                        self.logger.debug('post_data - batch {}[{}:{}] finding 201 CREATED in response'.
+                        logger.debug('batch {}[{}:{}] finding 201 CREATED in response'.
                                           format(bo_name, last_index, next_index))
                         matches = re.search('HTTP/1.1 201 Created', str(response.content), re.IGNORECASE)
                         if not matches:
-                            self.logger.debug('post_data - batch {}[{}:{}] finding duplicate key in response'.
+                            logger.debug('batch {}[{}:{}] finding duplicate key in response'.
                                                format(bo_name, last_index, next_index))
                             matches = re.search('Instance with the same key already exists', str(response.content),
                                                 re.IGNORECASE)
@@ -272,10 +275,10 @@ class ODataAccess:
                                 headers['content-type'] = 'application/json'
                                 for i in range(last_index, next_index):
                                     item = bo_values[i]
-                                    self.logger.debug("post_data - item {}[{}] getting SAP_UUID - {}='{}' and {}='{}'".
-                                                      format(bo_name, i, O_IDORIGIN, item[O_IDORIGIN],
-                                                             ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA],
-                                                             item[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]]))
+                                    logger.debug("item {}[{}] getting SAP_UUID - {}='{}' and {}='{}'".
+                                                 format(bo_name, i, O_IDORIGIN, item[O_IDORIGIN],
+                                                        ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA],
+                                                        item[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]]))
                                     get_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA + "?$select=SAP_UUID&$filter=" + \
                                               O_IDORIGIN + " eq '" + item[O_IDORIGIN] + "' and " + \
                                               ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA] + " eq '" + \
@@ -284,45 +287,67 @@ class ODataAccess:
                                                                 headers=headers,
                                                                 auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD))
                                     if response.status_code == 200:
-                                        self.logger.debug("post_data - item {}[{}] finding SAP_UUID in response".
-                                                          format(bo_name, i))
+                                        logger.debug("item {}[{}] finding SAP_UUID in response".format(bo_name, i))
                                         matches = re.search('<d:SAP_UUID>(.*?)</d:SAP_UUID>', str(response.content),
                                                             re.IGNORECASE)
                                         if matches:
                                             sap_uuid = matches.group(1)
                                             put_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA + "(guid'" + \
                                                       sap_uuid + "')"
-                                            self.logger.debug("post_data - item {}[{}] sending PUT - SAP_UUID='{}'".
-                                                              format(bo_name, i, sap_uuid))
+                                            logger.debug("item {}[{}] sending PUT - SAP_UUID='{}'".format(bo_name,
+                                                                                                          i, sap_uuid))
                                             response = self.session.put(put_url,
                                                                         headers=headers,
                                                                         auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD),
                                                                         data=json.dumps(item))
                                             if response.status_code == 204:
-                                                self.logger.info('post_data - item {}[{}] PUT successful - {} {}'.
+                                                logger.info("item {}[{}] PUT successful - {} {}".
                                                                  format(bo_name, i, response.status_code,
                                                                         response.reason))
                                             else:
-                                                self.logger.error('post_data - item {}[{}] PUT error - {} {}'.
-                                                                  format(bo_name, i, response.status_code,
-                                                                         response.reason))
+                                                logger.error("item {}[{}] PUT error - {} {} - {}='{}' and {}='{}'".
+                                                             format(bo_name, i, response.status_code, response.reason,
+                                                                    O_IDORIGIN, item[O_IDORIGIN],
+                                                                    ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA],
+                                                                    item[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]]))
                                         else:
-                                            self.logger.error('post_data - item {}[{}] SAP_UUID not found'.
-                                                              format(bo_name, i))
+                                            # TODO: accumulate this items and send a $batch POST instead of single POSTs
+                                            logger.debug("item {}[{}] sending POST - {}='{}' and {}='{}'".
+                                                         format(bo_name, i, O_IDORIGIN, item[O_IDORIGIN],
+                                                                ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA],
+                                                                item[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]]))
+                                            post_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA
+                                            response = self.session.post(post_url,
+                                                                         headers=headers,
+                                                                         auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD),
+                                                                         data=json.dumps(item))
+
+                                            if response.status_code == 201:
+                                                logger.info("item {}[{}] POST successful - {} {}".
+                                                            format(bo_name, i, response.status_code, response.reason))
+                                            else:
+                                                logger.debug("item {}[{}] POST error - {} {} - {}='{}' and {}='{}'".
+                                                             format(bo_name, i, response.status_code, response.reason,
+                                                                    O_IDORIGIN, item[O_IDORIGIN],
+                                                                    ODATA_CAMPANA_CONSULTORA_MAPPING[ O_ID_CAMPANA_CONSULTORA],
+                                                                    item[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]]))
                                     else:
-                                        self.logger.error('post_data - item {}[{}] SAP_UUID error - {} {}'.
-                                                          format(bo_name, i, response.status_code, response.reason))
+                                        logger.error("item {}[{}] SAP_UUID error - {} {} - {}='{}' and {}='{}'".
+                                                     format(bo_name, i, response.status_code, response.reason,
+                                                            O_IDORIGIN, item[O_IDORIGIN],
+                                                            ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA],
+                                                            item[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]]))
                             else:
-                                self.logger.error('post_data - batch {}[{}:{}] unexpected message in response - {} {}: {}'.
-                                                  format(bo_name, last_index, next_index, response.status_code,
-                                                         response.reason, response.content))
-                        else:
-                            self.logger.info('post_data - batch {}[{}:{}] successful - {} {}'.
+                                logger.error('batch {}[{}:{}] unexpected message in response - {} {}: {}\n\n{}\n\n'.
                                              format(bo_name, last_index, next_index, response.status_code,
-                                                    response.reason))
+                                                    response.reason, response.content, json_data))
+                        else:
+                            logger.info('batch {}[{}:{}] successful - {} {}'.
+                                        format(bo_name, last_index, next_index, response.status_code, response.reason))
                     else:
-                        self.logger.error('post_data - batch {}[{}:{}] error - {} {}'.
-                                          format(bo_name, last_index, next_index, response.status_code, response.reason))
+                        logger.error('batch {}[{}:{}] error - {} {}\n\n{}\n\n'.
+                                     format(bo_name, last_index, next_index, response.status_code, response.reason,
+                                            json_data))
                     last_index += batch_size
         self.logoff()
-        self.logger.debug('Posting data completed')
+        logger.debug('Posting data completed')

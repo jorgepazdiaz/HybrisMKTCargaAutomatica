@@ -76,5 +76,5 @@ SELECT [CodPais]
       ,[Link_InvitacionEmail_Ficha]
       ,[Link_InvitacionEmail_Landing]
       ,[Link_Ofertas]
-  FROM [BelcorpCostaRica].[CoachVirtual].[VirtualCoachConsultoras]
+  FROM [{}].[CoachVirtual].[VirtualCoachConsultoras]
 """
