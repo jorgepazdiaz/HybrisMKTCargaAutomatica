@@ -205,149 +205,179 @@ class ODataAccess:
         else:
             self.logger.error('Logoff error - {} {}'.format(response.status_code, response.reason))
 
-    def post_data(self, business_objects):
-        logger = logging.getLogger('{}.post_data'.format(self.logger.name))
-        logger.debug('Posting data')
-        new_bo = transform_business_objects(business_objects, self.contact_type)
-        for bo_name, bo_values in new_bo.items():
-            # Se descartan las interacciones porque se suben en conjunto con los contactos
-            if bo_name != ODATA_INTERACTION:
-                last_index = 0
-                batch_size = 1
-                if bo_name == ODATA_CONTACT:
-                    batch_size = ODATA_CONTACT_BATCH_SIZE
-                elif bo_name == ODATA_CAMPANA_CONSULTORA:
-                    batch_size = ODATA_CAMPANAS_CONSULTORA_BATCH_SIZE
-                if bo_name in [ODATA_CONTACT, ODATA_INTERACTION]:
-                    post_url = ODATA_BASE_URL + ODATA_POST_IMPORT_HEADERS
-                elif bo_name == ODATA_CAMPANA_CONSULTORA:
-                    post_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA
-                logger.debug('object[{}] batch_size[{}] post_url[{}]'.format(bo_name, batch_size,
-                                                                                              post_url))
-                while last_index < len(bo_values):
-                    next_index = min(last_index + batch_size, len(bo_values))
-                    logger.debug('processing {}[{}:{}]'.format(bo_name, last_index, next_index))
-                    time.sleep(ODATA_IDLE_TIME)
-                    if not self.session and self.session_created_at + datetime.timedelta(minutes=ODATA_SESSION_MAX_TTL) < \
-                            datetime.datetime.now():
-                        self.get_csrf_token()
-                    headers = {
-                        'x-csrf-token': self.csrf_token,
-                        'content-type': 'application/json',
-                        'cache-control': 'no-cache'
-                    }
-                    if bo_name == ODATA_CONTACT:
-                        json_header = {
-                            'Id': '',
-                            'Timestamp': get_timestamp_str(),
-                            'UserName': 'INTEGRATION',
-                            'SourceSystemType': 'EXT',
-                            'SourceSystemId': 'ODATA',
-                            'ForceSynchronousProcessing': True
-                        }
-                        json_data = json_header
-                        json_data[bo_name] = bo_values[last_index:next_index]
-                        json_data = json.dumps(json_data)
-                        post_url = ODATA_BASE_URL + ODATA_POST_IMPORT_HEADERS
-                    elif bo_name == ODATA_CAMPANA_CONSULTORA:
-                        headers['content-type'] = 'multipart/mixed;boundary=batch'
-                        json_data = generate_batch_json(bo_values[last_index:next_index])
-                        post_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA_BATCH
-                    logger.debug('sending POST {}[{}:{}]'.format(bo_name, last_index, next_index))
-                    response = self.session.post(post_url,
-                                                 headers=headers,
-                                                 auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD),
-                                                 data=json_data)
+    def post_contacts(self, bo_values):
+        logger = logging.getLogger('{}.post_contacts'.format(self.logger.name))
+        logger.debug('Starting')
+        bo_name = ODATA_CONTACT
+        last_index = 0
+        batch_size = ODATA_CONTACT_BATCH_SIZE
+        post_url = ODATA_BASE_URL + ODATA_POST_IMPORT_HEADERS
+        logger.debug('object[{}] batch_size[{}] post_url[{}]'.format(bo_name, batch_size, post_url))
+        while last_index < len(bo_values):
+            next_index = min(last_index + batch_size, len(bo_values))
+            logger.debug('processing {}[{}:{}]'.format(bo_name, last_index, next_index))
+            time.sleep(ODATA_IDLE_TIME)
+            if not self.session and self.session_created_at + datetime.timedelta(minutes=ODATA_SESSION_MAX_TTL) < \
+                    datetime.datetime.now():
+                self.get_csrf_token()
+            headers = {
+                'x-csrf-token': self.csrf_token,
+                'content-type': 'application/json',
+                'cache-control': 'no-cache'
+            }
+            json_header = {
+                'Id': '',
+                'Timestamp': get_timestamp_str(),
+                'UserName': 'INTEGRATION',
+                'SourceSystemType': 'EXT',
+                'SourceSystemId': 'ODATA',
+                'ForceSynchronousProcessing': True
+            }
+            json_data = json_header
+            json_data[bo_name] = bo_values[last_index:next_index]
+            json_data = json.dumps(json_data)
+            logger.debug('sending POST {}[{}:{}]'.format(bo_name, last_index, next_index))
+            response = self.session.post(post_url,
+                                         headers=headers,
+                                         auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD),
+                                         data=json_data)
 
-                    if bo_name == ODATA_CONTACT and response.status_code == 201:
-                        logger.info('batch {}[{}:{}] successful - {} {}'.
-                                         format(bo_name, last_index, next_index, response.status_code, response.reason))
-                    elif bo_name == ODATA_CAMPANA_CONSULTORA and response.status_code == 202:
-                        logger.debug('batch {}[{}:{}] finding 201 CREATED in response'.
-                                          format(bo_name, last_index, next_index))
-                        matches = re.search('HTTP/1.1 201 Created', str(response.content), re.IGNORECASE)
-                        if not matches:
-                            logger.debug('batch {}[{}:{}] finding duplicate key in response'.
-                                               format(bo_name, last_index, next_index))
-                            matches = re.search('Instance with the same key already exists', str(response.content),
-                                                re.IGNORECASE)
-                            if matches:
-                                headers['content-type'] = 'application/json'
-                                for i in range(last_index, next_index):
-                                    item = bo_values[i]
-                                    logger.debug("item {}[{}] getting SAP_UUID - {}='{}' and {}='{}'".
-                                                 format(bo_name, i, O_IDORIGIN, item[O_IDORIGIN],
-                                                        ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA],
-                                                        item[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]]))
-                                    get_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA + "?$select=SAP_UUID&$filter=" + \
-                                              O_IDORIGIN + " eq '" + item[O_IDORIGIN] + "' and " + \
-                                              ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA] + " eq '" + \
-                                              item[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]] + "'"
-                                    response = self.session.get(get_url,
+            if response.status_code == 201:
+                logger.info('batch {}[{}:{}] successful - {} {}'.
+                            format(bo_name, last_index, next_index, response.status_code, response.reason))
+            else:
+                logger.error('batch {}[{}:{}] error - {} {}\n\n{}\n\n'.
+                             format(bo_name, last_index, next_index, response.status_code, response.reason,
+                                    json_data))
+            last_index += batch_size
+
+    def post_campanas_consultora(self, bo_values, accumulate=True):
+        logger = logging.getLogger('{}.post_campanas_consultora'.format(self.logger.name))
+        logger.debug('Starting - accumulate: {}'.format(accumulate))
+        bo_name = ODATA_CAMPANA_CONSULTORA
+        last_index = 0
+        batch_size = ODATA_CAMPANAS_CONSULTORA_BATCH_SIZE
+        post_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA
+        post_url_batch = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA_BATCH
+        logger.debug('object[{}] batch_size[{}] post_url[{}]'.format(bo_name, batch_size,
+                                                                                      post_url))
+        failed = []
+        while last_index < len(bo_values):
+            next_index = min(last_index + batch_size, len(bo_values))
+            logger.debug('processing {}[{}:{}]'.format(bo_name, last_index, next_index))
+            time.sleep(ODATA_IDLE_TIME)
+            if not self.session and self.session_created_at + datetime.timedelta(minutes=ODATA_SESSION_MAX_TTL) < \
+                    datetime.datetime.now():
+                self.get_csrf_token()
+            headers = {
+                'x-csrf-token': self.csrf_token,
+                'content-type': 'application/json',
+                'cache-control': 'no-cache',
+                'content-type': 'multipart/mixed;boundary=batch'
+            }
+            json_data = generate_batch_json(bo_values[last_index:next_index])
+            logger.debug('sending POST {}[{}:{}]'.format(bo_name, last_index, next_index))
+            response = self.session.post(post_url_batch,
+                                         headers=headers,
+                                         auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD),
+                                         data=json_data)
+
+            if response.status_code == 202:
+                logger.debug('batch {}[{}:{}] finding 201 CREATED in response'.
+                             format(bo_name, last_index, next_index))
+                matches = re.search('HTTP/1.1 201 Created', str(response.content), re.IGNORECASE)
+                if not matches:
+                    logger.debug('batch {}[{}:{}] finding duplicate key in response'.
+                                 format(bo_name, last_index, next_index))
+                    matches = re.search('Instance with the same key already exists', str(response.content),
+                                        re.IGNORECASE)
+                    if matches:
+                        headers['content-type'] = 'application/json'
+                        for i in range(last_index, next_index):
+                            item = bo_values[i]
+                            logger.debug("item {}[{}] getting SAP_UUID - {}='{}' and {}='{}'".
+                                         format(bo_name, i, O_IDORIGIN, item[O_IDORIGIN],
+                                                ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA],
+                                                item[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]]))
+                            get_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA + "?$select=SAP_UUID&$filter=" + \
+                                      O_IDORIGIN + " eq '" + item[O_IDORIGIN] + "' and " + \
+                                      ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA] + " eq '" + \
+                                      item[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]] + "'"
+                            response = self.session.get(get_url,
+                                                        headers=headers,
+                                                        auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD))
+                            if response.status_code == 200:
+                                logger.debug("item {}[{}] finding SAP_UUID in response".format(bo_name, i))
+                                matches = re.search('<d:SAP_UUID>(.*?)</d:SAP_UUID>', str(response.content),
+                                                    re.IGNORECASE)
+                                if matches:
+                                    sap_uuid = matches.group(1)
+                                    put_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA + "(guid'" + \
+                                              sap_uuid + "')"
+                                    logger.debug("item {}[{}] sending PUT - SAP_UUID='{}'".
+                                                 format(bo_name, i, sap_uuid))
+                                    response = self.session.put(put_url,
                                                                 headers=headers,
-                                                                auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD))
-                                    if response.status_code == 200:
-                                        logger.debug("item {}[{}] finding SAP_UUID in response".format(bo_name, i))
-                                        matches = re.search('<d:SAP_UUID>(.*?)</d:SAP_UUID>', str(response.content),
-                                                            re.IGNORECASE)
-                                        if matches:
-                                            sap_uuid = matches.group(1)
-                                            put_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA + "(guid'" + \
-                                                      sap_uuid + "')"
-                                            logger.debug("item {}[{}] sending PUT - SAP_UUID='{}'".format(bo_name,
-                                                                                                          i, sap_uuid))
-                                            response = self.session.put(put_url,
-                                                                        headers=headers,
-                                                                        auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD),
-                                                                        data=json.dumps(item))
-                                            if response.status_code == 204:
-                                                logger.info("item {}[{}] PUT successful - {} {}".
-                                                                 format(bo_name, i, response.status_code,
-                                                                        response.reason))
-                                            else:
-                                                logger.error("item {}[{}] PUT error - {} {} - {}='{}' and {}='{}'".
-                                                             format(bo_name, i, response.status_code, response.reason,
-                                                                    O_IDORIGIN, item[O_IDORIGIN],
-                                                                    ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA],
-                                                                    item[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]]))
-                                        else:
-                                            # TODO: accumulate this items and send a $batch POST instead of single POSTs
-                                            logger.debug("item {}[{}] sending POST - {}='{}' and {}='{}'".
-                                                         format(bo_name, i, O_IDORIGIN, item[O_IDORIGIN],
-                                                                ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA],
-                                                                item[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]]))
-                                            post_url = ODATA_BASE_URL + ODATA_POST_CAMPANAS_CONSULTORA
-                                            response = self.session.post(post_url,
-                                                                         headers=headers,
-                                                                         auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD),
-                                                                         data=json.dumps(item))
-
-                                            if response.status_code == 201:
-                                                logger.info("item {}[{}] POST successful - {} {}".
-                                                            format(bo_name, i, response.status_code, response.reason))
-                                            else:
-                                                logger.debug("item {}[{}] POST error - {} {} - {}='{}' and {}='{}'".
-                                                             format(bo_name, i, response.status_code, response.reason,
-                                                                    O_IDORIGIN, item[O_IDORIGIN],
-                                                                    ODATA_CAMPANA_CONSULTORA_MAPPING[ O_ID_CAMPANA_CONSULTORA],
-                                                                    item[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]]))
+                                                                auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD),
+                                                                data=json.dumps(item))
+                                    if response.status_code == 204:
+                                        logger.info("item {}[{}] PUT successful - {} {}".
+                                                    format(bo_name, i, response.status_code, response.reason))
                                     else:
-                                        logger.error("item {}[{}] SAP_UUID error - {} {} - {}='{}' and {}='{}'".
+                                        logger.error("item {}[{}] PUT error - {} {} - {}='{}' and {}='{}'".
                                                      format(bo_name, i, response.status_code, response.reason,
                                                             O_IDORIGIN, item[O_IDORIGIN],
                                                             ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA],
                                                             item[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]]))
+                                else:
+                                    if not accumulate:
+                                        logger.debug("item {}[{}] sending POST - {}='{}' and {}='{}'".
+                                                     format(bo_name, i, O_IDORIGIN, item[O_IDORIGIN],
+                                                            ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA],
+                                                            item[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]]))
+                                        response = self.session.post(post_url,
+                                                                     headers=headers,
+                                                                     auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD),
+                                                                     data=json.dumps(item))
+
+                                        if response.status_code == 201:
+                                            logger.info("item {}[{}] POST successful - {} {}".
+                                                        format(bo_name, i, response.status_code, response.reason))
+                                        else:
+                                            logger.debug("item {}[{}] POST error - {} {} - {}='{}' and {}='{}'".
+                                                         format(bo_name, i, response.status_code, response.reason,
+                                                                O_IDORIGIN, item[O_IDORIGIN],
+                                                                ODATA_CAMPANA_CONSULTORA_MAPPING[ O_ID_CAMPANA_CONSULTORA],
+                                                                item[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]]))
+                                    else:
+                                        failed.append(item)
                             else:
-                                logger.error('batch {}[{}:{}] unexpected message in response - {} {}: {}\n\n{}\n\n'.
-                                             format(bo_name, last_index, next_index, response.status_code,
-                                                    response.reason, response.content, json_data))
-                        else:
-                            logger.info('batch {}[{}:{}] successful - {} {}'.
-                                        format(bo_name, last_index, next_index, response.status_code, response.reason))
+                                logger.error("item {}[{}] SAP_UUID error - {} {} - {}='{}' and {}='{}'".
+                                             format(bo_name, i, response.status_code, response.reason, O_IDORIGIN,
+                                                    item[O_IDORIGIN],
+                                                    ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA],
+                                                    item[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]]))
                     else:
-                        logger.error('batch {}[{}:{}] error - {} {}\n\n{}\n\n'.
+                        logger.error('batch {}[{}:{}] unexpected message in response - {} {}: {}\n\n{}\n\n'.
                                      format(bo_name, last_index, next_index, response.status_code, response.reason,
-                                            json_data))
-                    last_index += batch_size
+                                            response.content, json_data))
+                else:
+                    logger.info('batch {}[{}:{}] successful - {} {}'.
+                                format(bo_name, last_index, next_index, response.status_code, response.reason))
+            else:
+                logger.error('batch {}[{}:{}] error - {} {}\n\n{}\n\n'.
+                             format(bo_name, last_index, next_index, response.status_code, response.reason, json_data))
+            last_index += batch_size
+        if len(failed) > 0:
+            self.post_campanas_consultora(failed, accumulate=False)
+
+    def post_data(self, business_objects):
+        logger = logging.getLogger('{}.post_data'.format(self.logger.name))
+        logger.debug('Posting data')
+        new_bo = transform_business_objects(business_objects, self.contact_type)
+        if ODATA_CONTACT in new_bo.keys():
+            self.post_contacts(new_bo[ODATA_CONTACT])
+        if ODATA_CAMPANA_CONSULTORA in new_bo.keys():
+            self.post_campanas_consultora(new_bo[ODATA_CAMPANA_CONSULTORA])
         self.logoff()
         logger.debug('Posting data completed')

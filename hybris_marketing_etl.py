@@ -800,7 +800,7 @@ def init_logging():
     logger.addHandler(eh)
     # STREAM Handler
     ch = logging.StreamHandler()
-    ch.setLevel(logging.ERROR)
+    ch.setLevel(logging.INFO)
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
