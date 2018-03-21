@@ -271,9 +271,8 @@ class ODataAccess:
                 self.get_csrf_token()
             headers = {
                 'x-csrf-token': self.csrf_token,
-                'content-type': 'application/json',
-                'cache-control': 'no-cache',
-                'content-type': 'multipart/mixed;boundary=batch'
+                'content-type': 'multipart/mixed;boundary=batch',
+                'cache-control': 'no-cache'
             }
             json_data = generate_batch_json(bo_values[last_index:next_index])
             logger.debug('sending POST {}[{}:{}]'.format(bo_name, last_index, next_index))
