@@ -2,7 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="9dcd7d2c-204d-4428-b2a6-76762dad98da" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/common/settings.py" afterPath="$PROJECT_DIR$/common/settings.py" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change beforePath="$PROJECT_DIR$/hybris_marketing_etl.py" afterPath="$PROJECT_DIR$/hybris_marketing_etl.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -16,7 +17,7 @@
       <file leaf-file-name="virtual_coach_consultoras.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/dal/queries/virtual_coach_consultoras.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1292">
+            <state relative-caret-position="0">
               <caret line="76" column="18" lean-forward="false" selection-start-line="76" selection-start-column="18" selection-end-line="76" selection-end-column="18" />
               <folding />
             </state>
@@ -46,8 +47,8 @@
       <file leaf-file-name="dal.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/dal/dal.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="323">
-              <caret line="31" column="48" lean-forward="false" selection-start-line="31" selection-start-column="38" selection-end-line="31" selection-end-column="48" />
+            <state relative-caret-position="639">
+              <caret line="107" column="40" lean-forward="false" selection-start-line="107" selection-start-column="40" selection-end-line="107" selection-end-column="40" />
               <folding>
                 <element signature="e#0#13#0" expanded="true" />
               </folding>
@@ -55,21 +56,31 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="interactions.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/mapping/interactions.py">
+      <file leaf-file-name="messages.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/common/messages.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="0">
-              <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+            <state relative-caret-position="170">
+              <caret line="10" column="34" lean-forward="false" selection-start-line="10" selection-start-column="34" selection-end-line="10" selection-end-column="34" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="hybris_marketing_etl.py" pinned="false" current-in-tab="false">
+      <file leaf-file-name="interactions.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/mapping/interactions.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="85">
+              <caret line="5" column="0" lean-forward="false" selection-start-line="5" selection-start-column="0" selection-end-line="5" selection-end-column="0" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="hybris_marketing_etl.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/hybris_marketing_etl.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="231">
-              <caret line="855" column="63" lean-forward="false" selection-start-line="855" selection-start-column="63" selection-end-line="855" selection-end-column="63" />
+            <state relative-caret-position="340">
+              <caret line="719" column="26" lean-forward="false" selection-start-line="719" selection-start-column="26" selection-end-line="719" selection-end-column="26" />
               <folding>
                 <element signature="e#24#34#0" expanded="true" />
               </folding>
@@ -77,31 +88,21 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="__init__.py" pinned="false" current-in-tab="false">
-        <entry file="file://$USER_HOME$/AppData/Local/Programs/Python/Python36-32/Lib/logging/__init__.py">
+      <file leaf-file-name="contacts.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/mapping/contacts.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="17952">
-              <caret line="1058" column="0" lean-forward="false" selection-start-line="1058" selection-start-column="0" selection-end-line="1058" selection-end-column="0" />
+            <state relative-caret-position="187">
+              <caret line="11" column="0" lean-forward="false" selection-start-line="11" selection-start-column="0" selection-end-line="11" selection-end-column="0" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="settings.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="settings.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/common/settings.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="391">
-              <caret line="23" column="31" lean-forward="false" selection-start-line="23" selection-start-column="31" selection-end-line="23" selection-end-column="31" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="campanas_consultoras.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/mapping/campanas_consultoras.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="0">
-              <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+            <state relative-caret-position="85">
+              <caret line="5" column="17" lean-forward="true" selection-start-line="5" selection-start-column="17" selection-end-line="5" selection-end-column="17" />
               <folding />
             </state>
           </provider>
@@ -111,9 +112,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>VIRTUAL_COACH_CONSULTORAS_QUERY</find>
-      <find>validate_e</find>
-      <find>settin</find>
       <find>validate_email</find>
       <find>main</find>
       <find>belcorp_sql_to_hm_csv</find>
@@ -127,7 +125,23 @@
       <find>args</find>
       <find>SQL_DRIVER</find>
       <find>SqlServerAccess</find>
+      <find>--output</find>
+      <find>to_csv</find>
+      <find>sql2csv</find>
+      <find>flagappcons</find>
       <find>from_sql</find>
+      <find>generate_interactions</find>
+      <find>I_FLAG_APP</find>
+      <find>output</find>
+      <find>not fou</find>
+      <find>FLA</find>
+      <find>I_FLAG_APP_SOCIA</find>
+      <find>APP_CONS_ID_ORIGIN</find>
+      <find>csv2csv</find>
+      <find>generate_contacts</find>
+      <find>SOURCE_DELIMITER</find>
+      <find>I_FIELDS_CONTACT</find>
+      <find>from_csv</find>
     </findStrings>
     <dirStrings>
       <dir>C:\Users\rafael.torrado\GIT\hm_dataload\common</dir>
@@ -144,8 +158,8 @@
         <option value="$PROJECT_DIR$/dal/conn_credentials.py" />
         <option value="$PROJECT_DIR$/dal/dal.py" />
         <option value="$PROJECT_DIR$/dal/queries/virtual_coach_consultoras.py" />
-        <option value="$PROJECT_DIR$/hybris_marketing_etl.py" />
         <option value="$PROJECT_DIR$/common/settings.py" />
+        <option value="$PROJECT_DIR$/hybris_marketing_etl.py" />
       </list>
     </option>
   </component>
@@ -533,31 +547,15 @@
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/processCSV.py" />
-    <entry file="file://$USER_HOME$/AppData/Local/Programs/Python/Python36-32/Lib/logging/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="17952">
-          <caret line="1058" column="0" lean-forward="false" selection-start-line="1058" selection-start-column="0" selection-end-line="1058" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/dal/queries/virtual_coach_consultoras.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1292">
+        <state relative-caret-position="0">
           <caret line="76" column="18" lean-forward="false" selection-start-line="76" selection-start-column="18" selection-end-line="76" selection-end-column="18" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/dal/queries/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/mapping/interactions.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
@@ -573,31 +571,63 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/hybris_marketing_etl.py">
+    <entry file="file://$PROJECT_DIR$/common/settings.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="231">
-          <caret line="855" column="63" lean-forward="false" selection-start-line="855" selection-start-column="63" selection-end-line="855" selection-end-column="63" />
-          <folding>
-            <element signature="e#24#34#0" expanded="true" />
-          </folding>
+        <state relative-caret-position="85">
+          <caret line="5" column="17" lean-forward="true" selection-start-line="5" selection-start-column="17" selection-end-line="5" selection-end-column="17" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mapping/interactions.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="85">
+          <caret line="5" column="0" lean-forward="false" selection-start-line="5" selection-start-column="0" selection-end-line="5" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/common/messages.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="170">
+          <caret line="10" column="34" lean-forward="false" selection-start-line="10" selection-start-column="34" selection-end-line="10" selection-end-column="34" />
+          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/dal/dal.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="323">
-          <caret line="31" column="48" lean-forward="false" selection-start-line="31" selection-start-column="38" selection-end-line="31" selection-end-column="48" />
+        <state relative-caret-position="639">
+          <caret line="107" column="40" lean-forward="false" selection-start-line="107" selection-start-column="40" selection-end-line="107" selection-end-column="40" />
           <folding>
             <element signature="e#0#13#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/common/settings.py">
+    <entry file="file://$USER_HOME$/AppData/Local/Programs/Python/Python36-32/Lib/logging/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="391">
-          <caret line="23" column="31" lean-forward="false" selection-start-line="23" selection-start-column="31" selection-end-line="23" selection-end-column="31" />
+        <state relative-caret-position="659">
+          <caret line="1058" column="0" lean-forward="false" selection-start-line="1058" selection-start-column="0" selection-end-line="1058" selection-end-column="0" />
           <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mapping/contacts.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="187">
+          <caret line="11" column="0" lean-forward="false" selection-start-line="11" selection-start-column="0" selection-end-line="11" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/hybris_marketing_etl.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="340">
+          <caret line="719" column="26" lean-forward="false" selection-start-line="719" selection-start-column="26" selection-end-line="719" selection-end-column="26" />
+          <folding>
+            <element signature="e#24#34#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

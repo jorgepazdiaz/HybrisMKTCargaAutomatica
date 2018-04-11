@@ -715,6 +715,9 @@ def from_csv(input):
     logger.info('Starting')
     source_folder, source_file = os.path.split(os.path.abspath(input))
     input_file = os.path.join(source_folder, source_file)
+    logger.info(source_folder)
+    logger.info(source_file)
+    logger.info(input_file)
     with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
         reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
         contacts_to_write, contacts_to_discard = generate_contacts(reader)
