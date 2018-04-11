@@ -21,4 +21,4 @@ LOCAL_PART_REGEX = '^[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012345
 
 # LOGGING
 LOGGER_NAME = 'hybris_marketing_etl'
-LOGGING_FILE = 'C:\IDATHA\PYXIS\BELCORP - Hybris Marketing\BELCORP - Hybris Marketing ETL\hm_dataload\logs\hybris_marketing_etl'
+LOGGING_FILE = '/home/usrpyxis/logs/hybris_marketing_etl'
