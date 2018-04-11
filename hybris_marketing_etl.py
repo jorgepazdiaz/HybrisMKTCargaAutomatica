@@ -852,7 +852,7 @@ if __name__ == '__main__':
             contacts, interactions, campanas_consultoras = from_csv(input=args.input)
             to_csv(output=args.output, contacts=contacts, interactions=interactions, campanas_consultoras=campanas_consultoras)
         elif args.sql2csv:
-                args = parser_csv2csv.parse_args()
+                args = parser_sql2csv.parse_args()
                 contacts, interactions, campanas_consultoras = from_sql(server=args.server,
                                                                         database=args.database,
                                                                         user=args.user,
