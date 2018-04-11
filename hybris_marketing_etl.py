@@ -113,7 +113,13 @@ def write_output_file(output_file, to_write, output_file_type, discard=False):
         logger.debug('{} - Output fields: {}'.format(output_file_type, field_names))
         write_counter = 0
         max_files = int(math.ceil(len(to_write.values()) / BATCH_SIZE))
-        to_write_values = list(to_write.values())
+        if output_file_type == PREFIX_INTERACTION:
+            to_write_values = []
+            for it_1 in to_write.values():
+                for it_2 in it_1:
+                    to_write_values.append(it_2)
+        else:
+            to_write_values = list(to_write.values())
         for file_number in range(max_files):
             parcial_output_file = output_file.replace('.csv', '_{}.csv'.format(file_number))
             logger.debug('{} - Processing output file: {}'.format(output_file_type, parcial_output_file))
@@ -231,9 +237,9 @@ def generate_interactions(interactions, contacts):
                 if key not in row.keys():
                     raise Exception(MSG_INPUT_ERROR.format(key))
             # Chequea las aplicaciones instaladas
-            if row[I_FLAG_APP_CONS] == '1':
+            if row[I_FLAG_APP_CONS] == 1:
                 apps_installed.append(I_FLAG_APP_CONS)
-            if row[I_FLAG_APP_SOCIA] == '1':
+            if row[I_FLAG_APP_SOCIA] == 1:
                 apps_installed.append(I_FLAG_APP_SOCIA)
             contact_id = str(int(row[I_COD_EBELISTA])) + '_' + str(row[I_COD_PAIS])
             # Agrega una interacción por aplicación instalada
