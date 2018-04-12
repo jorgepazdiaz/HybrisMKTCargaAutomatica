@@ -161,6 +161,7 @@ def generate_contacts(contacts):
                 # contact[O_TELNR_MOBILE] = format_phone(I_TEL_MOVIL, row)
             else:
                 contact[O_SMTP_ADDR] = TEST_MAIL.format(read_counter + 1)
+                contact[O_TELNR_MOBILE] = format_phone(I_TEL_MOVIL, row)
             if row[I_FECHA_NACIMIENTO] != '':
                 contact[O_DATE_OF_BIRTH] = format_date(I_FECHA_NACIMIENTO, row)
             # contact[O_CODIGOEBELISTA] = int(row[I_COD_EBELISTA])
@@ -202,7 +203,7 @@ def generate_contacts(contacts):
                 contact[O_COUNTRY_FT] = str(row[I_DESC_PAIS]).strip()
             if O_SMTP_ADDR is not discarded.keys():
                 contact[O_SMTP_ADDR] = str(row[I_CORREO_ELECTRONICO]).strip()
-            if O_SMTP_ADDR is not discarded.keys():
+            if O_TELNR_MOBILE is not discarded.keys():
                 contact[O_TELNR_MOBILE] = str(row[I_TEL_MOVIL]).strip()
             if O_DATE_OF_BIRTH is not discarded.keys():
                 contact[O_DATE_OF_BIRTH] = str(row[I_FECHA_NACIMIENTO]).strip()
