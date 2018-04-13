@@ -259,20 +259,14 @@ def generate_interactions(interactions, contacts):
                 interaction[O_NAME_FIRST] = format_text(I_PRIMER_NOMBRE, row)
                 interaction[O_NAME_LAST] = format_text(I_APE_PATERNO, row)
                 interaction[O_TELNR_MOBILE] = format_phone(I_TEL_MOVIL, row)
-                logger.info('interaction[O_TELNR_MOBILE]: {}'.format(interaction[O_TELNR_MOBILE]))
                 if interaction[O_TELNR_MOBILE] != '':
-                    logger.info("if interaction[O_TELNR_MOBILE] != ''")
                     match_phone = re.search(PHONE_REGEX, interaction[O_TELNR_MOBILE])
                     if match_phone:
-                        logger.info("if match_phone")
                         generate_empty_attributes(interaction, O_INTERACTION_FIELDS)
                         if contact_id in contacts.keys():
-                            logger.info("if contact_id in contacts.keys()")
                             if contact_id in interactions_to_write:
-                                logger.info("if contact_id in interactions_to_write")
                                 interactions_to_write[contact_id].append(interaction)
                             else:
-                                logger.info("if not contact_id in interactions_to_write")
                                 interactions_to_write[contact_id] = [interaction]
                         else:
                             raise Exception(MSG_DISCARDED_CONTACT)
@@ -728,9 +722,6 @@ def from_csv(input):
     logger.info('Starting')
     source_folder, source_file = os.path.split(os.path.abspath(input))
     input_file = os.path.join(source_folder, source_file)
-    logger.info(source_folder)
-    logger.info(source_file)
-    logger.info(input_file)
     with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
         reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
         contacts_to_write, contacts_to_discard = generate_contacts(reader)
