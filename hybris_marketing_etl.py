@@ -260,13 +260,18 @@ def generate_interactions(interactions, contacts):
                 interaction[O_NAME_LAST] = format_text(I_APE_PATERNO, row)
                 interaction[O_TELNR_MOBILE] = format_phone(I_TEL_MOVIL, row)
                 if interaction[O_TELNR_MOBILE] != '':
+                    logger.info("if interaction[O_TELNR_MOBILE] != ''")
                     match_phone = re.search(PHONE_REGEX, interaction[O_TELNR_MOBILE])
                     if match_phone:
+                        logger.info("if match_phone")
                         generate_empty_attributes(interaction, O_INTERACTION_FIELDS)
                         if contact_id in contacts.keys():
+                            logger.info("if contact_id in contacts.keys()")
                             if contact_id in interactions_to_write:
+                                logger.info("if contact_id in interactions_to_write")
                                 interactions_to_write[contact_id].append(interaction)
                             else:
+                                logger.info("if not contact_id in interactions_to_write")
                                 interactions_to_write[contact_id] = [interaction]
                         else:
                             raise Exception(MSG_DISCARDED_CONTACT)
