@@ -238,9 +238,9 @@ def generate_interactions(interactions, contacts):
                 if key not in row.keys():
                     raise Exception(MSG_INPUT_ERROR.format(key))
             # Chequea las aplicaciones instaladas
-            if row[I_FLAG_APP_CONS] == 1:
+            if format_int(I_FLAG_APP_CONS, row, range(0, 2)) == 1:
                 apps_installed.append(I_FLAG_APP_CONS)
-            if row[I_FLAG_APP_SOCIA] == 1:
+            if format_int(I_FLAG_APP_SOCIA, row, range(0, 2)) == 1:
                 apps_installed.append(I_FLAG_APP_SOCIA)
             contact_id = str(int(row[I_COD_EBELISTA])) + '_' + str(row[I_COD_PAIS])
             # Agrega una interacción por aplicación instalada
