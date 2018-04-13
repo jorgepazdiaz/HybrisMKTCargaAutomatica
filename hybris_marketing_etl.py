@@ -259,6 +259,7 @@ def generate_interactions(interactions, contacts):
                 interaction[O_NAME_FIRST] = format_text(I_PRIMER_NOMBRE, row)
                 interaction[O_NAME_LAST] = format_text(I_APE_PATERNO, row)
                 interaction[O_TELNR_MOBILE] = format_phone(I_TEL_MOVIL, row)
+                logger.info('interaction[O_TELNR_MOBILE]: {}'.format(interaction[O_TELNR_MOBILE]))
                 if interaction[O_TELNR_MOBILE] != '':
                     logger.info("if interaction[O_TELNR_MOBILE] != ''")
                     match_phone = re.search(PHONE_REGEX, interaction[O_TELNR_MOBILE])
