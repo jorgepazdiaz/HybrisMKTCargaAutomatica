@@ -158,7 +158,7 @@ def generate_contacts(contacts):
             if MODE == 'PRODUCTIVE':
                 contact[O_SMTP_ADDR] = str(row[I_CORREO_ELECTRONICO]).strip()
                 # TODO: modificar cuando confirme que se realizarán los controles correspondientes en los datos fuente
-                # contact[O_TELNR_MOBILE] = format_phone(I_TEL_MOVIL, row)
+                contact[O_TELNR_MOBILE] = format_phone(I_TEL_MOVIL, row)
             else:
                 contact[O_SMTP_ADDR] = TEST_MAIL.format(read_counter + 1)
                 contact[O_TELNR_MOBILE] = format_phone(I_TEL_MOVIL, row)
