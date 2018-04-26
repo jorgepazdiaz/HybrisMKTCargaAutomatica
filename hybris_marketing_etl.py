@@ -65,7 +65,8 @@ def format_phone(attribute, row):
         if phone_string != '':
             return '+' + phone_string
         else:
-            raise MSG_EMPTY_PHONE
+            return phone_string
+            # raise MSG_EMPTY_PHONE
     except ValueError:
         raise Exception(MSG_INVALID_PHONE)
 
