@@ -4,8 +4,8 @@ SOURCE_ENCODING = 'utf8'
 SOURCE_DELIMITER = ','
 
 # OUTPUT SETTINGS
-# MODE = 'PRODUCTIVE'
-MODE = 'TEST'
+# MODE = 'TEST'
+# MODE = 'TEST'
 TEST_MAIL = 'brunoo.gonzalez+{}@gmail.com'
 BATCH_SIZE = 4500
 PREFIX_CONTACT = 'CONTACTS'
@@ -22,4 +22,4 @@ LOCAL_PART_REGEX = '^[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012345
 
 # LOGGING
 LOGGER_NAME = 'hybris_marketing_etl'
-LOGGING_FILE = 'C:\\Users\\rafael.torrado\\GIT\\PythonEnvs\\CargaAutomatica\\logs\\hybris_marketing_etl'
+#LOGGING_FILE = '/home/carlos/PythonEnvs/CargaAutomatica/logs/hybris_marketing_etl'
