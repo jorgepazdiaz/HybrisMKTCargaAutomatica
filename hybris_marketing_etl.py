@@ -138,7 +138,7 @@ def write_output_file(output_file, to_write, output_file_type, discard=False):
         logger.info('{} - Lines written: {}'.format(output_file_type, write_counter))
 
 
-def generate_contacts(contacts):
+def generate_contacts(contacts, mode):
     logger = logging.getLogger('{}.generate_contacts'.format(LOGGER_NAME))
     logger.debug('Processing input')
     logger.debug('Required fields: {}'.format(I_FIELDS_CONTACT))
@@ -156,7 +156,7 @@ def generate_contacts(contacts):
             contact[O_NAME_FIRST] = format_text(I_PRIMER_NOMBRE, row)
             contact[O_NAME_LAST] = format_text(I_APE_PATERNO, row)
             contact[O_COUNTRY_FT] = format_text(I_DESC_PAIS, row)
-            if MODE == 'PRODUCTIVE':
+            if mode == 'PRODUCTIVE':
                 contact[O_SMTP_ADDR] = str(row[I_CORREO_ELECTRONICO]).strip()
                 # TODO: modificar cuando confirme que se realizarán los controles correspondientes en los datos fuente
                 contact[O_TELNR_MOBILE] = format_phone(I_TEL_MOVIL, row)
@@ -730,14 +730,14 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
     return campanas_consultoras_to_write, campanas_consultoras_to_discard
 
 
-def from_csv(input):
+def from_csv(input, mode ="TEST"):
     logger = logging.getLogger('{}.from_csv'.format(LOGGER_NAME))
     logger.info('Starting')
     source_folder, source_file = os.path.split(os.path.abspath(input))
     input_file = os.path.join(source_folder, source_file)
     with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
         reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
-        contacts_to_write, contacts_to_discard = generate_contacts(reader)
+        contacts_to_write, contacts_to_discard = generate_contacts(reader, mode)
         # Resetea la lectura del archivo para tomar las interacciones
         ifile.seek(0)
         reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
@@ -750,7 +750,7 @@ def from_csv(input):
     return contacts_to_write, interactions_to_write, campanas_consultoras_to_write
 
 
-def from_sql(server, database, user, password):
+def from_sql(server, database, user, password, mode="TEST"):
     logger = logging.getLogger('{}.from_sql'.format(LOGGER_NAME))
     logger.info('Starting')
     sql_access = SqlServerAccess(server, database, user, password)
@@ -765,7 +765,7 @@ def from_sql(server, database, user, password):
     for row in cursor.fetchall():
         query_result.append(dict(zip(columns, row)))
     logger.info('Rows retrieved: {}'.format(len(query_result)))
-    contacts_to_write, contacts_to_discard = generate_contacts(query_result)
+    contacts_to_write, contacts_to_discard = generate_contacts(query_result, mode)
     interactions_to_write, interactions_to_discard = generate_interactions(query_result, contacts_to_write)
     campanas_consultoras_to_write, campanas_consultoras_to_discard = generate_campanas_consultoras(query_result,
                                                                                                    contacts_to_write)
@@ -799,7 +799,7 @@ def to_csv(output, contacts, interactions, campanas_consultoras):
     write_output_file(file, interactions, output_file_type=PREFIX_INTERACTION, discard=False)
 
 
-def init_logging():
+def init_logging(LOGGING_FILE):
     logger = logging.getLogger(LOGGER_NAME)
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s - %(levelname)s[%(name)s] - %(message)s')
@@ -824,9 +824,7 @@ def init_logging():
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
-
 if __name__ == '__main__':
-    init_logging()
     try:
         parser = argparse.ArgumentParser(description='Belcorp ETL to Hybris Marketing', add_help=False)
         group = parser.add_mutually_exclusive_group(required=True)
@@ -843,6 +841,8 @@ if __name__ == '__main__':
         parser_sql2odata.add_argument('-d', '--database', type=str, required=True)
         parser_sql2odata.add_argument('-u', '--user', type=str, required=True)
         parser_sql2odata.add_argument('-p', '--password', type=str, required=True)
+        parser_sql2odata.add_argument('-m', '--mode', type=str,choices=['TEST', 'PRODUCTIVE'], required=False)
+        parser_sql2odata.add_argument('-l', '--logger', type=str, required=True)
         parser_sql2odata.add_argument('-c', '--contact_type', type=str, choices=['B2B', 'B2C'], required=True)
 
         # SQL2CSV
@@ -853,45 +853,62 @@ if __name__ == '__main__':
         parser_sql2csv.add_argument('-u', '--user', type=str, required=True)
         parser_sql2csv.add_argument('-p', '--password', type=str, required=True)
         parser_sql2csv.add_argument('-o', '--output', type=str, required=True)
+        parser_sql2csv.add_argument('-l', '--logger', type=str, required=True)     
+        parser_sql2csv.add_argument('-m', '--mode', type=str,choices=['TEST', 'PRODUCTIVE'], required=False)
 
         # CSV2CSV
         parser_csv2csv = argparse.ArgumentParser(description='csv2csv', add_help=False)
         parser_csv2csv.add_argument('--csv2csv', action='store_true', required=True)
         parser_csv2csv.add_argument('-i', '--input', type=str, required=True)
         parser_csv2csv.add_argument('-o', '--output', type=str, required=True)
+        parser_csv2csv.add_argument('-l', '--logger', type=str, required=True)
+        parser_csv2csv.add_argument('-m', '--mode', type=str,choices=['TEST', 'PRODUCTIVE'], required=False)
 
         # CSV2ODATA
         parser_csv2odata = argparse.ArgumentParser(description='csv2odata', add_help=False)
         parser_csv2odata.add_argument('--csv2odata', action='store_true', required=True)
         parser_csv2odata.add_argument('-i', '--input', type=str, required=True)
         parser_csv2odata.add_argument('-c', '--contact_type', type=str, choices=['B2B', 'B2C'], required=True)
+        parser_csv2odata.add_argument('-m', '--mode', type=str,choices=['TEST', 'PRODUCTIVE'], required=False)
+        parser_csv2odata.add_argument('-l', '--logger', type=str, required=True)
 
         args, unkwn_args = parser.parse_known_args()
+
         if args.csv2csv:
             args = parser_csv2csv.parse_args()
-            contacts, interactions, campanas_consultoras = from_csv(input=args.input)
+            init_logging(args.logger)
+            args.mode = "TEST" if not args.mode else args.mode
+            contacts, interactions, campanas_consultoras = from_csv(input=args.input, mode=args.mode)
             to_csv(output=args.output, contacts=contacts, interactions=interactions, campanas_consultoras=campanas_consultoras)
         elif args.sql2csv:
-                args = parser_sql2csv.parse_args()
-                contacts, interactions, campanas_consultoras = from_sql(server=args.server,
-                                                                        database=args.database,
-                                                                        user=args.user,
-                                                                        password=args.password)
-                to_csv(output=args.output, contacts=contacts, interactions=interactions,
+            args = parser_sql2csv.parse_args()
+            init_logging(args.logger)
+            args.mode = "TEST" if not args.mode else args.mode
+            contacts, interactions, campanas_consultoras = from_sql(server=args.server,
+                                                                    database=args.database,
+                                                                    user=args.user,
+                                                                    password=args.password,
+                                                                    mode=args.mode)
+            to_csv(output=args.output, contacts=contacts, interactions=interactions,
                        campanas_consultoras=campanas_consultoras)
         elif args.csv2odata:
             args = parser_csv2odata.parse_args()
-            contacts, interactions, campanas_consultoras = from_csv(input=args.input)
+            init_logging(args.logger)
+            args.mode = "TEST" if not args.mode else args.mode
+            contacts, interactions, campanas_consultoras = from_csv(input=args.input, mode=args.mode)
             to_odata(contacts=contacts,
                      interactions=interactions,
                      campanas_consultoras=campanas_consultoras,
                      contact_type=args.contact_type)
         elif args.sql2odata:
             args = parser_sql2odata.parse_args()
+            init_logging(args.logger)
+            args.mode = "TEST" if not args.mode else args.mode
             contacts, interactions, campanas_consultoras = from_sql(server=args.server,
                                                                     database=args.database,
                                                                     user=args.user,
-                                                                    password=args.password)
+                                                                    password=args.password,
+                                                                    mode=args.mode)
             to_odata(contacts=contacts,
                      interactions=interactions,
                      campanas_consultoras=campanas_consultoras,
@@ -901,6 +918,7 @@ if __name__ == '__main__':
             parser_sql2csv.print_usage()
             parser_csv2odata.print_usage()
             parser_sql2odata.print_usage()
+
     except Exception as e:
         logger = logging.getLogger(LOGGER_NAME)
         logger.error(e)
