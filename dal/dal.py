@@ -50,7 +50,7 @@ class SqlServerAccess:
 
 # Obtiene el timestamp actual y trunca la cantidad de caracteres, reemplazando el . que está de más
 def get_timestamp_str():
-    return '/Date({})/'.format(str(round(time.time(), 3)).replace('.', ''))
+    return "/Date("+str(int(round(time.time() * 1000)))+")/"
 
 
 def get_timestamp_from_date_str(date_to_parse):
