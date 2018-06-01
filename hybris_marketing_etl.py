@@ -243,6 +243,8 @@ def generate_interactions(interactions, contacts):
                 apps_installed.append(I_FLAG_APP_CONS)
             if format_int(I_FLAG_APP_SOCIA, row, range(0, 2)) == 1:
                 apps_installed.append(I_FLAG_APP_SOCIA)
+            if format_int(I_FLAG_CONSULTORA_DIGITAL, row, range(0, 2)) == 1:
+                apps_installed.append(I_FLAG_CONSULTORA_DIGITAL)
             contact_id = str(int(row[I_COD_EBELISTA])) + '_' + str(row[I_COD_PAIS])
             # Agrega una interacción por aplicación instalada
             for app in apps_installed:
@@ -502,7 +504,8 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
                 campana_consultora[O_FLAG_INSCRITA_GANA_MAS] = format_int(I_FLAG_INSCRITA_GANA_MAS, row, range(0, 3))
                 campana_consultora[O_FLAG_APP_CONS] = format_int(I_FLAG_APP_CONS, row, range(0, 2))
                 campana_consultora[O_FLAG_APP_SOCIA] = format_int(I_FLAG_APP_SOCIA, row, range(0, 2))
-
+                campana_consultora[O_FLAG_CONSULTORA_DIGITAL] = format_int(I_FLAG_CONSULTORA_DIGITAL, row, range(0, 2))
+                
                 # DATES
                 campana_consultora[O_FECHA_INICIO_VENTA] = format_date(I_FECHA_INICIO_VENTA, row)
                 campana_consultora[O_FECHA_FIN_VENTA] = format_date(I_FECHA_FIN_VENTA, row)
@@ -546,6 +549,7 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
                 campana_consultora[O_LINK_OFERTAS] = format_text(I_LINK_OFERTAS, row)
                 campana_consultora[O_TOKEN_APP_CONS] = format_text(I_TOKEN_APP_CONS, row)
                 campana_consultora[O_TOKEN_APP_SOCIA] = format_text(I_TOKEN_APP_SOCIA, row)
+
             except ValueError as ve:
                 raise Exception(ve.args[0])
 
@@ -710,6 +714,8 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
                 discarded[O_FLAG_APP_SOCIA] = row[I_FLAG_APP_SOCIA]
             if O_TOKEN_APP_SOCIA not in discarded.keys():
                 discarded[O_TOKEN_APP_SOCIA] = row[I_TOKEN_APP_SOCIA]
+            if O_FLAG_CONSULTORA_DIGITAL not in discarded.keys():
+                discarded[O_FLAG_CONSULTORA_DIGITAL] = row[I_FLAG_CONSULTORA_DIGITAL]
             if O_COD_EBELISTA not in discarded.keys():
                 discarded[O_COD_EBELISTA] = str(row[I_COD_EBELISTA]).strip() + '_' + \
                                             str(row[I_COD_PAIS]).strip()
