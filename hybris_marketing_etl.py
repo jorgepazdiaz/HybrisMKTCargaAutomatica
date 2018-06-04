@@ -176,8 +176,9 @@ def generate_contacts(contacts, mode):
             is_valid_mail = validate_email(contact[O_SMTP_ADDR])
             if contact[O_SMTP_ADDR] == '' and contact[O_TELNR_MOBILE] == '':
                 raise ValueError(MSG_NO_CONTACT_INFO)
-            elif contact[O_SMTP_ADDR] == '':
-                raise ValueError(MSG_EMPTY_MAIL)
+            # Se comenta la validación de emails vacíos a pedido de Silvia Peña el 04/06/18
+            #elif contact[O_SMTP_ADDR] == '':
+            #    raise ValueError(MSG_EMPTY_MAIL)
             elif contact[O_SMTP_ADDR] != '':
                 if not is_valid_mail:
                     raise ValueError(MSG_INVALID_MAIL)
