@@ -114,7 +114,7 @@ def transform_campanas_consultora(values):
                            O_FLAG_IP_UNICO, O_FLAG_OFERTA_DIGITAL_UC, O_FLAG_PASO_PEDIDO,
                            O_FLAG_PASO_PEDIDO_CACT, O_FLAG_TP1, O_FLAG_TP2, O_IP_UNICO_PU5C,
                            O_NRO_CAMPANA_NUEVAS, O_NRO_PEDIDOS_NUEVAS, O_OFERTA_DIGITAL_PU5C,
-                           O_FLAG_INSCRITA_GANA_MAS, O_FLAG_APP_SOCIA, O_FLAG_APP_CONS]:
+                           O_FLAG_INSCRITA_GANA_MAS, O_FLAG_APP_SOCIA, O_FLAG_APP_CONS, O_FLAG_CONSULTORA_DIGITAL]:
                     # Modificación de int a str
                     to_odata[ODATA_CAMPANA_CONSULTORA_MAPPING[key]] = str(row[key])
                 elif key in [O_FECHA_ENVIO, O_FECHA_INICIO_FACTURACION, O_FECHA_FIN_FACTURACION,

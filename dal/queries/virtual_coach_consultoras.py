@@ -80,5 +80,6 @@ SELECT [CodPais]
       ,[TokenAppCons]
       ,[FlagAppSocia]
       ,[TokenAppSocia]
+      ,[FlagConsultoraDigital]
   FROM [{}].[CoachVirtual].[VirtualCoachConsultoras]
 """
