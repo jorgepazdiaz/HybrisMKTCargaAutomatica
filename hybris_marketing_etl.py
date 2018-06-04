@@ -243,8 +243,6 @@ def generate_interactions(interactions, contacts):
                 apps_installed.append(I_FLAG_APP_CONS)
             if format_int(I_FLAG_APP_SOCIA, row, range(0, 2)) == 1:
                 apps_installed.append(I_FLAG_APP_SOCIA)
-            if format_int(I_FLAG_CONSULTORA_DIGITAL, row, range(0, 2)) == 1:
-                apps_installed.append(I_FLAG_CONSULTORA_DIGITAL)
             contact_id = str(int(row[I_COD_EBELISTA])) + '_' + str(row[I_COD_PAIS])
             # Agrega una interacción por aplicación instalada
             for app in apps_installed:
