@@ -237,6 +237,7 @@ class ODataAccess:
             json_data[bo_name] = bo_values[last_index:next_index]
             json_data = json.dumps(json_data)
             logger.debug('sending POST {}[{}:{}]'.format(bo_name, last_index, next_index))
+            logger.info(json_data)
             response = self.session.post(post_url,
                                          headers=headers,
                                          auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD),
