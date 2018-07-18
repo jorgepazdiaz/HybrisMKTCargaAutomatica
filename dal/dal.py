@@ -303,6 +303,7 @@ class ODataAccess:
                                       O_IDORIGIN + " eq '" + item[O_IDORIGIN] + "' and " + \
                                       ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA] + " eq '" + \
                                       item[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]] + "'"
+
                             response = self.session.get(get_url,
                                                         headers=headers,
                                                         auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD))
