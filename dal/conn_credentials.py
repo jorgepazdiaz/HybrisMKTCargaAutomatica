@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Database
-SQL_DRIVER = '{ODBC Driver 13 for SQL Server}'
+SQL_DRIVER = '{ODBC Driver 17 for SQL Server}'
 # SQL_DRIVER = '{SQL Server Native Client 11.0}'
 # SQL_TRUSTED = 'yes'
 

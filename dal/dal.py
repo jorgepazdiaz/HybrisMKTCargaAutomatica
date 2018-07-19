@@ -237,6 +237,7 @@ class ODataAccess:
             json_data[bo_name] = bo_values[last_index:next_index]
             json_data = json.dumps(json_data)
             logger.debug('sending POST {}[{}:{}]'.format(bo_name, last_index, next_index))
+            logger.info(json_data)
             response = self.session.post(post_url,
                                          headers=headers,
                                          auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD),
@@ -302,6 +303,7 @@ class ODataAccess:
                                       O_IDORIGIN + " eq '" + item[O_IDORIGIN] + "' and " + \
                                       ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA] + " eq '" + \
                                       item[ODATA_CAMPANA_CONSULTORA_MAPPING[O_ID_CAMPANA_CONSULTORA]] + "'"
+
                             response = self.session.get(get_url,
                                                         headers=headers,
                                                         auth=HTTPBasicAuth(ODATA_USER, ODATA_PASSWORD))
