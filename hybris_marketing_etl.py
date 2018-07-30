@@ -556,7 +556,8 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
                 raise Exception(MSG_INVALID_DOMAIN.format(I_COD_EBELISTA))
             campana_consultora[O_COD_EBELISTA] = \
                 str(int(row[I_COD_EBELISTA])) + '_' + str(campana_consultora[O_COD_PAIS])
-            campana_consultora[O_EBELISTA]=row[I_COD_EBELISTA]
+            campana_consultora[
+                O_COD_CONSULTORA]=row[I_COD_EBELISTA]
             campana_consultora[O_ID_CAMPANA_CONSULTORA] = str(campana_consultora[O_ANIO_CAMPANA_EXPOSICION]) + \
                                                           str(campana_consultora[O_NRO_CAMPANA_EXPOSICION]).zfill(2) + \
                                                           '_' + str(campana_consultora[O_COD_EBELISTA])
@@ -719,8 +720,8 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
             if O_COD_EBELISTA not in discarded.keys():
                 discarded[O_COD_EBELISTA] = str(row[I_COD_EBELISTA]).strip() + '_' + \
                                             str(row[I_COD_PAIS]).strip()
-            if O_EBELISTA not in discarded.keys():
-                discarded[O_EBELISTA] = row[I_COD_EBELISTA]
+            if O_COD_CONSULTORA not in discarded.keys():
+                discarded[O_COD_CONSULTORA] = row[I_COD_EBELISTA]
             if O_ID_CAMPANA_CONSULTORA not in discarded.keys():
                 discarded[O_ID_CAMPANA_CONSULTORA] = str(row[I_ANIO_CAMPANA_EXPOSICION][0:4]).strip() + \
                                                      str(row[I_ANIO_CAMPANA_EXPOSICION][4:6]).strip().zfill(2) + '_' + \
