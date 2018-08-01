@@ -174,7 +174,7 @@ def generate_contacts(contacts, mode):
             # Email & phone Validation
             is_valid_phone = re.search(PHONE_REGEX, contact[O_TELNR_MOBILE])
             is_valid_mail = validate_email(contact[O_SMTP_ADDR])
-            if contact[O_SMTP_ADDR] == '' and contact[O_TELNR_MOBILE] == '':
+            if (contact[O_SMTP_ADDR] == '' and contact[O_TELNR_MOBILE] == ''):
                 raise ValueError(MSG_NO_CONTACT_INFO)
             # Se comenta la validación de emails vacíos a pedido de Silvia Peña el 04/06/18
             #elif contact[O_SMTP_ADDR] == '':
@@ -185,6 +185,9 @@ def generate_contacts(contacts, mode):
                 else:
                     [local_part, domain_part] = str(contact[O_SMTP_ADDR]).split('@', 1)
                     if not re.search(LOCAL_PART_REGEX, local_part):
+                        raise ValueError(MSG_INVALID_MAIL)
+                    # Se agrega validación de que los emails no tengan pipe a pedido de Silvia 01/08/18
+                    elif ((local_part.find('|') != -1) or (domain_part.find('|') != -1)):
                         raise ValueError(MSG_INVALID_MAIL)
                     else:
                         contacts_to_write[contact[O_ID]] = contact
