@@ -8,7 +8,9 @@ import json
 import logging
 import logging.handlers
 import argparse
+import neverbounce_sdk
 from datetime import datetime
+from time import sleep
 from common.settings import *
 from common.messages import *
 from common.domains import D_MARCAS, D_CATEGORIAS, D_CONSTANCIA_NUEVAS, D_TIPO_CONSULTORA, D_SEGMENTOS
@@ -94,6 +96,10 @@ def write_output_file(output_file, to_write, output_file_type, discard=False):
     elif output_file_type == PREFIX_CAMPANA_CONSULTORA:
         field_names = O_CAMPANA_CONSULTORA_FIELDS
         file_header = O_CAMPANA_CONSULTORA_FILE_HEADER
+    elif output_file_type == PREFIX_NEVERBOUNCE_EMAILS:
+        field_names = NB_CACHE_FIELDS
+        file_header = ''
+
     if discard:
         logger.debug('{} - Writing discarded file: {}'.format(output_file_type, output_file))
         discard_counter = 0
@@ -138,13 +144,94 @@ def write_output_file(output_file, to_write, output_file_type, discard=False):
         logger.info('{} - Lines written: {}'.format(output_file_type, write_counter))
 
 
+def neverbounce_cache_from_csv(input):
+    logger = logging.getLogger('{}.neverbounce_cache_from_csv'.format(LOGGER_NAME))
+    logger.info('Starting reading NeverBounce cache csv file...')
+    source_folder, source_file = os.path.split(os.path.abspath(input))
+    input_file = os.path.join(source_folder, source_file)
+    neverbounce_cache = []
+    try:
+        with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
+            neverbounce_cache = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
+            logger.info(type(neverbounce_cache))
+            for cache_elem in neverbounce_cache:
+                logger.info(cache_elem)
+            exists_neverbounce_cache = True
+            logger.info('Cache exists')
+    except Exception as e:
+        logger.info('Cache does not exist')
+        exists_neverbounce_cache = False
+
+    return exists_neverbounce_cache, neverbounce_cache
+
+
+def find_in_neverbounce_cache(email_address, neverbounce_cache):
+    email_exists_in_cache = False
+    neverbounce_validation_result_type = ''
+    for row in neverbounce_cache:
+        for key in NB_CACHE_FIELDS:
+            if key not in row.keys():
+                raise ValueError(MSG_INPUT_ERROR.format(key))
+        if row[NB_EMAIL_ADDRESS] == email_address:
+            email_exists_in_cache = True
+            neverbounce_validation_result_type = row[NB_VALIDATION_RESULT]
+            break
+
+    return email_exists_in_cache, neverbounce_validation_result_type
+
+
+def neverbounce_validate_emails(contacts_to_validate_in_neverbounce_dict):
+    logger = logging.getLogger('{}.neverbounce_validate_emails'.format(LOGGER_NAME))
+    neverbounce_validation_contacts = contacts_to_validate_in_neverbounce_dict
+    neverbounce_data = []
+    contacts_to_validate_in_neverbounce = contacts_to_validate_in_neverbounce_dict.items()
+    # Transforming contacts list to NeverBounce emails list
+    for row in contacts_to_validate_in_neverbounce:
+        contact = row[1]
+        if contact[O_SMTP_ADDR] != '':
+            neverbounce_reg = contact
+            neverbounce_reg[NB_EMAIL_KEY] = contact[O_SMTP_ADDR]
+            neverbounce_data.append(neverbounce_reg)
+    # Create sdk client
+    client = neverbounce_sdk.client(api_key=NB_API_KEY)
+    # Create Job
+    job = client.jobs_create(input=neverbounce_data)
+    while job == {}: pass
+    logger.debug('jobs_create: {}'.format(job))
+    assert job['status'] == 'success'
+    resp = client.jobs_parse(job['job_id'], auto_start=False)
+    while resp == {}: pass
+    logger.debug('jobs_parse: {}'.format(resp))
+    assert resp['status'] == 'success'
+    resp = client.jobs_start(job['job_id'])
+    while resp == {}: pass
+    logger.debug('jobs_start: {}'.format(resp))
+    assert resp['status'] == 'success'
+    results = client.jobs_results(job_id=job['job_id'])
+    for result in results:
+        validation_result = result['verification']['result']
+        neverbounce_validation_contacts[result['data'][O_ID]][NB_VALIDATION_RESULT_KEY] = validation_result
+
+    return neverbounce_validation_contacts
+
+
+def neverbounce_cache_to_csv(output, neverbounce_emails):
+    logger = logging.getLogger('{}.neverbounce_cache_to_csv'.format(LOGGER_NAME))
+    logger.info('Starting')
+    output_folder, output_file = os.path.split(os.path.abspath(output))
+    file = os.path.join(output_folder, output_file)
+    write_output_file(file, neverbounce_emails, output_file_type=PREFIX_NEVERBOUNCE_EMAILS, discard=False)
+
+
 def generate_contacts(contacts, mode):
     logger = logging.getLogger('{}.generate_contacts'.format(LOGGER_NAME))
     logger.debug('Processing input')
     logger.debug('Required fields: {}'.format(I_FIELDS_CONTACT))
     contacts_to_write = {}
     contacts_to_discard = {}
+    contacts_to_validate_in_neverbounce = {}
     read_counter = 0
+    [exists_neverbounce_cache, neverbounce_cache] = neverbounce_cache_from_csv(NB_CSV_CACHE_FILE)
     for row in contacts:
         contact = {}
         read_counter += 1
@@ -174,23 +261,36 @@ def generate_contacts(contacts, mode):
             # Email & phone Validation
             is_valid_phone = re.search(PHONE_REGEX, contact[O_TELNR_MOBILE])
             is_valid_mail = validate_email(contact[O_SMTP_ADDR])
-            if (contact[O_SMTP_ADDR] == '' and contact[O_TELNR_MOBILE] == ''):
+            if contact[O_SMTP_ADDR] == '' and contact[O_TELNR_MOBILE] == '':
                 raise ValueError(MSG_NO_CONTACT_INFO)
-            # Se comenta la validación de emails vacíos a pedido de Silvia Peña el 04/06/18
+            # Validation of empty emails is removed. Requested by Silvia Peña on 04/06/18
             #elif contact[O_SMTP_ADDR] == '':
             #    raise ValueError(MSG_EMPTY_MAIL)
             elif contact[O_SMTP_ADDR] != '':
                 if not is_valid_mail:
                     raise ValueError(MSG_INVALID_MAIL)
                 else:
-                    [local_part, domain_part] = str(contact[O_SMTP_ADDR]).split('@', 1)
+                    local_part, domain_part = str(contact[O_SMTP_ADDR]).split('@', 1)
                     if not re.search(LOCAL_PART_REGEX, local_part):
                         raise ValueError(MSG_INVALID_MAIL)
-                    # Se agrega validación de que los emails no tengan pipe a pedido de Silvia 01/08/18
-                    elif ((local_part.find('|') != -1) or (domain_part.find('|') != -1)):
+                    # Validation added: emails must not contain a pipe. Requested by Silvia Peña on 01/08/18
+                    elif local_part.find('|') != -1 or domain_part.find('|') != -1:
                         raise ValueError(MSG_INVALID_MAIL)
                     else:
-                        contacts_to_write[contact[O_ID]] = contact
+                        email_exists_in_cache = False
+                        if exists_neverbounce_cache:
+                            # Find email address in NeverBounce cache
+                            print('existe cache')
+                            for cache_elem in neverbounce_cache:
+                                print(cache_elem)
+                            email_exists_in_cache, neverbounce_validation_result = find_in_neverbounce_cache(contact[O_SMTP_ADDR], neverbounce_cache)
+                        if not email_exists_in_cache:
+                            # Add contact to NeverBounce validation dictionary
+                            contacts_to_validate_in_neverbounce[contact[O_ID]] = contact
+                        elif neverbounce_validation_result in NB_INVALID_RESULTS:
+                            raise ValueError(MSG_INVALID_MAIL_CACHE)
+                        else:
+                            contacts_to_write[contact[O_ID]] = contact
             elif not (is_valid_phone or contact[O_TELNR_MOBILE] == ''):
                 raise ValueError(MSG_INVALID_PHONE)
             else:
@@ -222,7 +322,36 @@ def generate_contacts(contacts, mode):
             contacts_to_discard[contact[O_ID]] = discarded
             for key in row.keys():
                 row[key] = str(row[key])
+            #if len(contacts_to_validate_in_neverbounce) == 0:
             logger.error('Discarded {}: {}'.format(discarded[O_DISCARD_MOTIVE], json.dumps(row)))
+    # Processing NeverBounce validation list
+    if len(contacts_to_validate_in_neverbounce) > 0:
+        neverbounce_validation_contacts = neverbounce_validate_emails(contacts_to_validate_in_neverbounce)
+        for neverbounce_row in neverbounce_validation_contacts.items():
+            neverbounce_contact = neverbounce_row[1]
+            try:
+                if neverbounce_contact[NB_VALIDATION_RESULT_KEY] in NB_INVALID_RESULTS:
+                    raise ValueError(MSG_INVALID_MAIL_NB)
+                else:
+                    neverbounce_contact.pop(NB_VALIDATION_RESULT_KEY)
+                    neverbounce_contact.pop(NB_EMAIL_KEY)
+                    contacts_to_write[neverbounce_contact[O_ID]] = neverbounce_contact
+            except Exception as e:
+                neverbounce_contact.pop(NB_VALIDATION_RESULT_KEY)
+                neverbounce_contact.pop(NB_EMAIL_KEY)
+                discarded = neverbounce_contact.copy()
+                discarded[O_DISCARD_MOTIVE] = e.args[0]
+                generate_empty_attributes(discarded, O_CONTACT_FIELDS)
+                contacts_to_discard[neverbounce_contact[O_ID]] = discarded
+                code, country = str(neverbounce_contact[O_ID]).split('_', 1)
+                code = str(code).zfill(7)
+                for row in contacts:
+                    if str(row[I_COD_EBELISTA]).strip() == str(code).strip()\
+                            and str(row[I_COD_PAIS]).strip() == str(country).strip():
+                        for key in row.keys():
+                            row[key] = str(row[key])
+                        logger.error('Discarded {}: {}'.format(discarded[O_DISCARD_MOTIVE], json.dumps(row)))
+                        break
     logger.info('Lines read: {} - To write: {} - Discarded: {}'.
                 format(read_counter, len(contacts_to_write), len(contacts_to_discard)))
     return contacts_to_write, contacts_to_discard
@@ -749,12 +878,15 @@ def from_csv(input, mode ="TEST"):
     input_file = os.path.join(source_folder, source_file)
     with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
         reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
+        logger.info(type(reader))
+        for cache_elem in reader:
+            logger.info(cache_elem)
         contacts_to_write, contacts_to_discard = generate_contacts(reader, mode)
-        # Resetea la lectura del archivo para tomar las interacciones
+        # Reset file reading to take into account the interactions
         ifile.seek(0)
         reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
         interactions_to_write, interactions_to_discard = generate_interactions(reader, contacts_to_write)
-        # Resetea la lectura del archivo para tomar las campanas_consultoras
+        # Reset file reading to take into account the campaña_consultoras
         ifile.seek(0)
         reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
         campanas_consultoras_to_write, campanas_consultoras_to_discard = generate_campanas_consultoras(reader,
