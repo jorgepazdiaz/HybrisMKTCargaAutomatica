@@ -153,9 +153,6 @@ def neverbounce_cache_from_csv(input):
     try:
         with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
             neverbounce_cache = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
-            logger.info(type(neverbounce_cache))
-            for cache_elem in neverbounce_cache:
-                logger.info(cache_elem)
             exists_neverbounce_cache = True
             logger.info('Cache exists')
     except Exception as e:
@@ -231,9 +228,10 @@ def generate_contacts(contacts, mode):
     contacts_to_discard = {}
     contacts_to_validate_in_neverbounce = {}
     read_counter = 0
-    [exists_neverbounce_cache, neverbounce_cache] = neverbounce_cache_from_csv(NB_CSV_CACHE_FILE)
+    exists_neverbounce_cache, neverbounce_cache = neverbounce_cache_from_csv(NB_CSV_CACHE_FILE)
     for row in contacts:
         contact = {}
+        print(row.keys())
         read_counter += 1
         try:
             for key in I_FIELDS_CONTACT:
@@ -878,9 +876,6 @@ def from_csv(input, mode ="TEST"):
     input_file = os.path.join(source_folder, source_file)
     with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
         reader = csv.DictReader(ifile, delimiter=SOURCE_DELIMITER)
-        logger.info(type(reader))
-        for cache_elem in reader:
-            logger.info(cache_elem)
         contacts_to_write, contacts_to_discard = generate_contacts(reader, mode)
         # Reset file reading to take into account the interactions
         ifile.seek(0)
