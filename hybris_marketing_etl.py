@@ -376,11 +376,12 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
                 campana_consultora[O_DESC_SEGMENTO] = row[I_DESC_SEGMENTO]
                 if campana_consultora[O_DESC_SEGMENTO] not in [x[1] for x in D_SEGMENTOS]:
                     raise Exception(MSG_INVALID_DOMAIN.format(I_DESC_SEGMENTO))
-                else:
-                    if [campana_consultora[O_COD_COMPORTAMIENTO], campana_consultora[O_DESC_SEGMENTO]] \
-                            not in D_SEGMENTOS:
-                        raise Exception(
-                            'Attributes "{}"-"{}" invalid tuple'.format(I_COD_COMPORTAMIENTO, I_DESC_SEGMENTO))
+                #else:
+                    # Requested to remove this validation by S.Peña on 16/8/18
+                    #if [campana_consultora[O_COD_COMPORTAMIENTO], campana_consultora[O_DESC_SEGMENTO]] \
+                    #        not in D_SEGMENTOS:
+                    #    raise Exception(
+                    #        'Attributes "{}"-"{}" invalid tuple'.format(I_COD_COMPORTAMIENTO, I_DESC_SEGMENTO))
             except ValueError:
                 raise Exception(MSG_INVALID_TYPE.format(I_DESC_SEGMENTO))
 
