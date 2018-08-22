@@ -307,17 +307,20 @@ def generate_contacts(contacts, mode):
                     elif str(contact[O_SMTP_ADDR]).find('|') != -1:
                         raise ValueError(MSG_INVALID_MAIL)
                     else:
-                        email_exists_in_cache = False
-                        if exists_neverbounce_cache:
-                            # Find email address in NeverBounce cache
-                            email_exists_in_cache, neverbounce_validation_result = find_in_neverbounce_cache(contact[O_SMTP_ADDR], neverbounce_cache)
-                        if not email_exists_in_cache:
-                            # Add contact to NeverBounce validation dictionary
-                            contacts_copy.append(row)
-                            contacts_to_validate_in_neverbounce[contact[O_ID]] = contact
-                            # contacts_to_write[contact[O_ID]] = contact
-                        elif not neverbounce_validation_result in NB_VALID_RESULTS:
-                            raise ValueError(MSG_INVALID_MAIL_CACHE)
+                        if mode == 'PRODUCTIVE':
+                            email_exists_in_cache = False
+                            if exists_neverbounce_cache:
+                                # Find email address in NeverBounce cache
+                                email_exists_in_cache, neverbounce_validation_result = find_in_neverbounce_cache(contact[O_SMTP_ADDR], neverbounce_cache)
+                            if not email_exists_in_cache:
+                                # Add contact to NeverBounce validation dictionary
+                                contacts_copy.append(row)
+                                contacts_to_validate_in_neverbounce[contact[O_ID]] = contact
+                                # contacts_to_write[contact[O_ID]] = contact
+                            elif not neverbounce_validation_result in NB_VALID_RESULTS:
+                                raise ValueError(MSG_INVALID_MAIL_CACHE)
+                            else:
+                                contacts_to_write[contact[O_ID]] = contact
                         else:
                             contacts_to_write[contact[O_ID]] = contact
             elif not (is_valid_phone or contact[O_TELNR_MOBILE] == ''):

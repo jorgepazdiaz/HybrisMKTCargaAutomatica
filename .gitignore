@@ -38,24 +38,25 @@ Thumbs.db
 
 # PyCharm generated files #
 ######################
-.idea
+.idea/
 .idea/*
 # .idea/misc.xml
 # .idea/modules.xml
 # .idea/vcs.xml
 # .idea/workspace.xml
-common/__pycache__
+common/__pycache__/
 common/__pycache__/*
 # common/__pycache__/__init__.cpython-36.pyc
 # common/__pycache__/domains.cpython-36.pyc
 # common/__pycache__/messages.cpython-36.pyc
 # common/__pycache__/settings.cpython-36.pyc
-dal/__pycache__
+dal/__pycache__/
 dal/__pycache__/*
 # dal/__pycache__/__init__.cpython-36.pyc
 # dal/__pycache__/conn_credentials.cpython-36.pyc
 # dal/__pycache__/dal.cpython-36.pyc
-dal/queries/__pycache__
+dal/queries/__pycache__/
 dal/queries/__pycache__/*
 # dal/queries/__pycache__/__init__.cpython-36.pyc
 # dal/queries/__pycache__/virtual_coach_consultoras.cpython-36
+mapping/__pycache__/
