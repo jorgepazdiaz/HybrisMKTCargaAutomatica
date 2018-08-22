@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 MSG_INVALID_MAIL = 'Invalid Email'
+MSG_INVALID_MAIL_NB = 'Invalid Email (NeverBounce validation)'
+MSG_INVALID_MAIL_CACHE = 'Invalid Email (cache validation)'
 MSG_EMPTY_MAIL = 'Empty Email'
 MSG_INVALID_PHONE = 'Invalid Phone'
 MSG_EMPTY_PHONE = 'Empty Phone'
