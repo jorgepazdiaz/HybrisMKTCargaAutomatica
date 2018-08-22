@@ -652,8 +652,8 @@ def generate_campanas_consultoras(campanas_consultoras, contacts):
             except ValueError:
                 raise Exception(MSG_INVALID_TYPE.format(O_NRO_CAMPANA_PROCESO))
             try:
-                campana_consultora[O_NRO_CAMPANA_NUEVAS] = format_int(I_NRO_CAMPANA_NUEVAS, row, range(0, 7))
-                campana_consultora[O_NRO_PEDIDOS_NUEVAS] = format_int(I_NRO_PEDIDOS_NUEVAS, row, range(0, 7))
+                campana_consultora[O_NRO_CAMPANA_NUEVAS] = format_int(I_NRO_CAMPANA_NUEVAS, row, range(-1, 7))
+                campana_consultora[O_NRO_PEDIDOS_NUEVAS] = format_int(I_NRO_PEDIDOS_NUEVAS, row, range(-1, 7))
                 campana_consultora[O_IP_UNICO_PU5C] = format_int(I_IP_UNICO_PU5C, row, range(0, 6))
                 campana_consultora[O_OFERTA_DIGITAL_PU5C] = format_int(I_OFERTA_DIGITAL_PU5C, row, range(0, 7))
                 campana_consultora[O_FLAG_CONSTANCIA_NUEVAS] = format_int(I_FLAG_CONSTANCIA_NUEVAS, row, range(-1, 2))
