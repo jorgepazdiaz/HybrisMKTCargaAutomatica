@@ -60,3 +60,4 @@ dal/queries/__pycache__/*
 # dal/queries/__pycache__/__init__.cpython-36.pyc
 # dal/queries/__pycache__/virtual_coach_consultoras.cpython-36
 mapping/__pycache__/
+mapping/__pycache__/*
