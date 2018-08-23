@@ -380,7 +380,6 @@ def generate_contacts(contacts, mode):
                 generate_empty_attributes(discarded, O_CONTACT_FIELDS)
                 contacts_to_discard[neverbounce_contact[O_ID]] = discarded
                 code, country = str(neverbounce_contact[O_ID]).split('_', 1)
-                code = str(code).zfill(7)
                 for row in contacts_copy:
                     if str(int(row[I_COD_EBELISTA])) == str(code) and str(row[I_COD_PAIS]) == str(country):
                         for key in row.keys():
