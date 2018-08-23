@@ -970,13 +970,13 @@ def to_csv(output, contacts, interactions, campanas_consultoras):
     logger.info('Starting')
     output_folder, output_file = os.path.split(os.path.abspath(output))
     # CONTACTS
-    file = os.path.join(output_folder, PREFIX_CONTACT + '_' + output_file)
+    file = os.path.join(output_folder+'\\'+OUTPUT_CONTACTS_FOLDER, PREFIX_CONTACT + '_' + output_file)
     write_output_file(file, contacts, output_file_type=PREFIX_CONTACT, discard=False)
     # CAMPANAS_CONSULTORAS
-    file = os.path.join(output_folder, PREFIX_CAMPANA_CONSULTORA + '_' + output_file)
+    file = os.path.join(output_folder+'\\'+OUTPUT_CAMPANAS_CONSULTORAS_FOLDER, PREFIX_CAMPANA_CONSULTORA + '_' + output_file)
     write_output_file(file, campanas_consultoras, output_file_type=PREFIX_CAMPANA_CONSULTORA, discard=False)
     # INTERACTIONS
-    file = os.path.join(output_folder, PREFIX_INTERACTION + '_' + output_file)
+    file = os.path.join(output_folder+'\\'+OUTPUT_INTERACTIONS_FOLDER, PREFIX_INTERACTION + '_' + output_file)
     write_output_file(file, interactions, output_file_type=PREFIX_INTERACTION, discard=False)
 
 
