@@ -382,8 +382,7 @@ def generate_contacts(contacts, mode):
                 code, country = str(neverbounce_contact[O_ID]).split('_', 1)
                 code = str(code).zfill(7)
                 for row in contacts_copy:
-                    if str(row[I_COD_EBELISTA]).strip() == str(code).strip() \
-                            and str(row[I_COD_PAIS]).strip() == str(country).strip():
+                    if str(int(row[I_COD_EBELISTA])) == str(code) and str(row[I_COD_PAIS]) == str(country):
                         for key in row.keys():
                             row[key] = str(row[key])
                         logger.error('Discarded {}: {}'.format(discarded[O_DISCARD_MOTIVE], json.dumps(row)))
