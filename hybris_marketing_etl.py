@@ -17,6 +17,7 @@ from common.domains import D_MARCAS, D_CATEGORIAS, D_CONSTANCIA_NUEVAS, D_TIPO_C
 from mapping.contacts import *
 from mapping.campanas_consultoras import *
 from mapping.interactions import *
+from mapping.subscriptions import *
 from validate_email import validate_email
 from dal.dal import SqlServerAccess, ODataAccess
 from dal.queries.virtual_coach_consultoras import VIRTUAL_COACH_CONSULTORAS_QUERY
@@ -99,6 +100,9 @@ def write_output_file(output_file, to_write, output_file_type, discard=False):
     elif output_file_type == PREFIX_NEVERBOUNCE_EMAILS:
         field_names = NB_CACHE_FIELDS
         file_header = ''
+    elif output_file_type == PREFIX_SUBSCRIPTIONS:
+        field_names = O_SUBSCRIPTION_FIELDS
+        file_header = O_SUBSCRIPTION_FILE_HEADER
 
     if discard:
         logger.debug('{} - Writing discarded file: {}'.format(output_file_type, output_file))
@@ -252,6 +256,41 @@ def neverbounce_cache_to_csv(output, neverbounce_cache):
     write_output_file(file, neverbounce_cache_dict, output_file_type=PREFIX_NEVERBOUNCE_EMAILS, discard=False)
 
 
+def transform_nb_cache_to_subscriptions(neverbounce_cache):
+    subscriptions = []
+    for neverbounce_cache_reg in neverbounce_cache:
+        if not neverbounce_cache_reg[NB_VALIDATION_RESULT] in NB_VALID_RESULTS:
+            subscription_reg = {}
+            subscription_reg[O_SUBSCRIPTION_CONTACT_ORIGIN] = neverbounce_cache_reg[NB_CONTACT_ORIGIN]
+            subscription_reg[O_SUBSCRIPTION_CONTACT_ID] = neverbounce_cache_reg[NB_CONTACT_ID]
+            subscription_reg[O_SUBSCRIPTION_ID_ORIGIN] = neverbounce_cache_reg[NB_ID_ORIGIN]
+            subscription_reg[O_SUBSCRIPTION_ID] = neverbounce_cache_reg[NB_EMAIL_ADDRESS]
+            subscription_reg[O_SUBSCRIPTION_MKT_AREA_ID] = ''
+            subscription_reg[O_SUBSCRIPTION_MKT_PERM_COMM_MEDIUM] = 'EMAIL'
+            subscription_reg[O_SUBSCRIPTION_COMM_MEDIUM] = 'EMAIL'
+            subscription_reg[O_SUBSCRIPTION_TIMESTAMP] = ''
+            subscription_reg[O_SUBSCRIPTION_COMM_CAT_ID] = ''
+            subscription_reg[O_SUBSCRIPTION_OPT_IN] = 'N' # opt-out
+
+            subscriptions.append(subscription_reg)
+
+    return subscriptions
+
+def subscriptions_to_csv(output, subscriptions):
+    logger = logging.getLogger('{}.subscriptions_to_csv'.format(LOGGER_NAME))
+    logger.info('Starting')
+    output_folder, output_file = os.path.split(os.path.abspath(output))
+    if os.path.exists(output): os.remove(output)
+    # SUBSCTRIPTIONS
+    file = os.path.join(output_folder + '\\' + OUTPUT_SUBSCRIPTIONS_FOLDER, PREFIX_SUBSCRIPTIONS + '_' + output_file)
+    subscriptions_dict = {}
+    subscriptions_count = 0
+    for subscription_reg in subscriptions:
+        subscriptions_count += 1
+        subscriptions_dict['SUBSCRIPTION_{}'.format(subscriptions_count)] = subscription_reg
+    write_output_file(file, subscriptions_dict, output_file_type=PREFIX_SUBSCRIPTIONS, discard=False)
+
+
 def generate_contacts(contacts, mode):
     logger = logging.getLogger('{}.generate_contacts'.format(LOGGER_NAME))
     logger.debug('Processing input')
@@ -360,17 +399,19 @@ def generate_contacts(contacts, mode):
     # Processing NeverBounce validation list
     if len(contacts_to_validate_in_neverbounce) > 0:
         neverbounce_validation_contacts = neverbounce_validate_emails(contacts_to_validate_in_neverbounce)
+        invalid_email = False
         for neverbounce_row in neverbounce_validation_contacts.items():
             neverbounce_contact = neverbounce_row[1]
             neverbounce_email_reg = {}
-            neverbounce_email_reg[NB_CONTACT_ORIGIN] = 'SAP_ODATA_IMPORT'
-            neverbounce_email_reg[NB_CONTACT_ID] = neverbounce_contact[O_ID]
+            neverbounce_email_reg[NB_CONTACT_ORIGIN] = ''
+            neverbounce_email_reg[NB_CONTACT_ID] = ''
             neverbounce_email_reg[NB_ID_ORIGIN] = 'EMAIL'
             neverbounce_email_reg[NB_EMAIL_ADDRESS] = neverbounce_contact[NB_EMAIL_KEY]
             neverbounce_email_reg[NB_VALIDATION_RESULT] = neverbounce_contact[NB_VALIDATION_RESULT]
             neverbounce_cache.append(neverbounce_email_reg)
             try:
                 if not neverbounce_contact[NB_VALIDATION_RESULT] in NB_VALID_RESULTS:
+                    invalid_email = True
                     raise ValueError(MSG_INVALID_MAIL_NB)
                 else:
                     neverbounce_contact.pop(NB_VALIDATION_RESULT)
@@ -390,7 +431,12 @@ def generate_contacts(contacts, mode):
                             row[key] = str(row[key])
                         logger.error('Discarded {}: {}'.format(discarded[O_DISCARD_MOTIVE], json.dumps(row)))
                         break
+        # Quito los repetidos
+        neverbounce_cache = list({v[NB_EMAIL_ADDRESS]:v for v in neverbounce_cache}.values())
         neverbounce_cache_to_csv(NB_CSV_CACHE_FILE, neverbounce_cache)
+        if invalid_email:
+            subscrtiptions = transform_nb_cache_to_subscriptions(neverbounce_cache)
+            subscriptions_to_csv(args.output, subscrtiptions)
     logger.info('Lines read: {} - To write: {} - Discarded: {}'.
                 format(read_counter, len(contacts_to_write), len(contacts_to_discard)))
     return contacts_to_write, contacts_to_discard
