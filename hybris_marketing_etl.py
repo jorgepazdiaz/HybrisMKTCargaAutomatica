@@ -171,10 +171,12 @@ def neverbounce_cache_from_csv(input):
         with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
             reader = csv.DictReader(ifile, delimiter=NB_SOURCE_DELIMITER)
             for line in reader:
-                neverbounce_cache_reg = {}
-                neverbounce_cache_reg[NB_EMAIL_ADDRESS] = line[NB_EMAIL_ADDRESS]
-                neverbounce_cache_reg[NB_VALIDATION_RESULT] = line[NB_VALIDATION_RESULT]
-                neverbounce_cache.append(neverbounce_cache_reg)
+                neverbounce_email_reg = {}
+                neverbounce_email_reg[NB_CONTACT_ID] = line[NB_CONTACT_ID]
+                neverbounce_email_reg[NB_COUNTRY_ID] = line[NB_COUNTRY_ID]
+                neverbounce_email_reg[NB_EMAIL_ADDRESS] = line[NB_EMAIL_ADDRESS]
+                neverbounce_email_reg[NB_VALIDATION_RESULT] = line[NB_VALIDATION_RESULT]
+                neverbounce_cache.append(neverbounce_email_reg)
             exists_neverbounce_cache = True
             logger.info('Cache exists')
     except Exception as e:
@@ -214,30 +216,37 @@ def neverbounce_validate_emails(contacts_to_validate_in_neverbounce_dict):
     # Create sdk client
     client = neverbounce_sdk.client(api_key=NB_API_KEY)
     # Create Job
-    job = client.jobs_create(input=neverbounce_data)
-    logger.debug('jobs_create: {}'.format(job))
-    assert job['status'] == 'success'
-    resp = client.jobs_parse(job['job_id'], auto_start=False)
-    logger.debug('jobs_parse: {}'.format(resp))
-    assert resp['status'] == 'success'
-    resp = client.jobs_start(job['job_id'])
-    logger.debug('jobs_start: {}'.format(resp))
-    assert resp['status'] == 'success'
-    jobs_results_failed_attempts = 0
-    # Busy waiting for results
-    while True:
-        try:
-            results = client.jobs_results(job_id=job['job_id'])
-        except:
-            sleep(NB_SLEEP_SECONDS)
-            jobs_results_failed_attempts += 1
-            continue
-        else:
-            break
-    logger.debug('jobs_results_failed_attempts: {}'.format(jobs_results_failed_attempts))
-    for result in results:
-        validation_result = result['verification']['result']
-        neverbounce_validation_contacts[result['data'][O_ID]][NB_VALIDATION_RESULT] = validation_result
+    max_jobs_data = int(math.ceil(len(neverbounce_data) / NB_DATA_SIZE))
+    for data_number in range(max_jobs_data):
+        partial_data = []
+        ini_index = data_number * NB_DATA_SIZE
+        end_index = min((data_number + 1) * NB_DATA_SIZE, len(neverbounce_data))
+        for item in neverbounce_data[ini_index:end_index]:
+            partial_data.append(item)
+        job = client.jobs_create(input=partial_data)
+        logger.debug('jobs_create: {}'.format(job))
+        assert job['status'] == 'success'
+        resp = client.jobs_parse(job['job_id'], auto_start=False)
+        logger.debug('jobs_parse: {}'.format(resp))
+        assert resp['status'] == 'success'
+        resp = client.jobs_start(job['job_id'])
+        logger.debug('jobs_start: {}'.format(resp))
+        assert resp['status'] == 'success'
+        jobs_results_failed_attempts = 0
+        # Busy waiting for results
+        while True:
+            try:
+                results = client.jobs_results(job_id=job['job_id'])
+            except:
+                sleep(NB_SLEEP_SECONDS)
+                jobs_results_failed_attempts += 1
+                continue
+            else:
+                break
+        logger.debug('jobs_results_failed_attempts: {}'.format(jobs_results_failed_attempts))
+        for result in results:
+            validation_result = result['verification']['result']
+            neverbounce_validation_contacts[result['data'][O_ID]][NB_VALIDATION_RESULT] = validation_result
 
     return neverbounce_validation_contacts
 
@@ -261,9 +270,9 @@ def transform_nb_cache_to_subscriptions(neverbounce_cache):
     for neverbounce_cache_reg in neverbounce_cache:
         if not neverbounce_cache_reg[NB_VALIDATION_RESULT] in NB_VALID_RESULTS:
             subscription_reg = {}
-            subscription_reg[O_SUBSCRIPTION_CONTACT_ORIGIN] = neverbounce_cache_reg[NB_CONTACT_ORIGIN]
-            subscription_reg[O_SUBSCRIPTION_CONTACT_ID] = neverbounce_cache_reg[NB_CONTACT_ID]
-            subscription_reg[O_SUBSCRIPTION_ID_ORIGIN] = neverbounce_cache_reg[NB_ID_ORIGIN]
+            subscription_reg[O_SUBSCRIPTION_CONTACT_ORIGIN] = ''
+            subscription_reg[O_SUBSCRIPTION_CONTACT_ID] = ''
+            subscription_reg[O_SUBSCRIPTION_ID_ORIGIN] = 'EMAIL'
             subscription_reg[O_SUBSCRIPTION_ID] = neverbounce_cache_reg[NB_EMAIL_ADDRESS]
             subscription_reg[O_SUBSCRIPTION_MKT_AREA_ID] = ''
             subscription_reg[O_SUBSCRIPTION_MKT_PERM_COMM_MEDIUM] = 'EMAIL'
@@ -274,6 +283,7 @@ def transform_nb_cache_to_subscriptions(neverbounce_cache):
 
             subscriptions.append(subscription_reg)
 
+    subscriptions = list({v[O_SUBSCRIPTION_ID]: v for v in subscriptions}.values())
     return subscriptions
 
 def subscriptions_to_csv(output, subscriptions):
@@ -403,9 +413,9 @@ def generate_contacts(contacts, mode):
         for neverbounce_row in neverbounce_validation_contacts.items():
             neverbounce_contact = neverbounce_row[1]
             neverbounce_email_reg = {}
-            neverbounce_email_reg[NB_CONTACT_ORIGIN] = ''
-            neverbounce_email_reg[NB_CONTACT_ID] = ''
-            neverbounce_email_reg[NB_ID_ORIGIN] = 'EMAIL'
+            neverbounce_email_reg[NB_CONTACT_ID] = neverbounce_contact[O_CODIGOEBELISTA]
+            code, country = str(neverbounce_contact[O_ID]).split('_', 1)
+            neverbounce_email_reg[NB_COUNTRY_ID] = country
             neverbounce_email_reg[NB_EMAIL_ADDRESS] = neverbounce_contact[NB_EMAIL_KEY]
             neverbounce_email_reg[NB_VALIDATION_RESULT] = neverbounce_contact[NB_VALIDATION_RESULT]
             neverbounce_cache.append(neverbounce_email_reg)
@@ -432,7 +442,8 @@ def generate_contacts(contacts, mode):
                         logger.error('Discarded {}: {}'.format(discarded[O_DISCARD_MOTIVE], json.dumps(row)))
                         break
         # Quito los repetidos
-        neverbounce_cache = list({v[NB_EMAIL_ADDRESS]:v for v in neverbounce_cache}.values())
+        #neverbounce_cache = list({v[NB_EMAIL_ADDRESS]:v for v in neverbounce_cache}.values())
+        neverbounce_cache = [dict(t) for t in {tuple(d.items()) for d in neverbounce_cache}]
         neverbounce_cache_to_csv(NB_CSV_CACHE_FILE, neverbounce_cache)
         if invalid_email:
             subscrtiptions = transform_nb_cache_to_subscriptions(neverbounce_cache)
