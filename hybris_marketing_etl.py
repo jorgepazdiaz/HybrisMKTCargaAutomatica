@@ -215,22 +215,25 @@ def neverbounce_validate_emails(contacts_to_validate_in_neverbounce_dict):
             neverbounce_data.append(neverbounce_reg)
     # Create sdk client
     client = neverbounce_sdk.client(api_key=NB_API_KEY)
-    # Create Job
     max_jobs_data = int(math.ceil(len(neverbounce_data) / NB_DATA_SIZE))
+    batch_count = 0
     for data_number in range(max_jobs_data):
+        batch_count += 1
         partial_data = []
         ini_index = data_number * NB_DATA_SIZE
         end_index = min((data_number + 1) * NB_DATA_SIZE, len(neverbounce_data))
         for item in neverbounce_data[ini_index:end_index]:
             partial_data.append(item)
+        # Create Job
+        logger.info('sending batch number: {}'.format(batch_count))
         job = client.jobs_create(input=partial_data)
-        logger.debug('jobs_create: {}'.format(job))
+        logger.debug('job created: {}'.format(job))
         assert job['status'] == 'success'
         resp = client.jobs_parse(job['job_id'], auto_start=False)
-        logger.debug('jobs_parse: {}'.format(resp))
+        logger.debug('job parsef: {}'.format(resp))
         assert resp['status'] == 'success'
         resp = client.jobs_start(job['job_id'])
-        logger.debug('jobs_start: {}'.format(resp))
+        logger.debug('job started: {}'.format(resp))
         assert resp['status'] == 'success'
         jobs_results_failed_attempts = 0
         # Busy waiting for results

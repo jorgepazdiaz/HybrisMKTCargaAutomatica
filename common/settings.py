@@ -20,11 +20,12 @@ OUTPUT_FILE_TYPES = [PREFIX_CONTACT, PREFIX_INTERACTION, PREFIX_CAMPANA_CONSULTO
 # NEVERBOUNCE
 NB_VALID_RESULTS = ['valid']
 NB_CSV_CACHE_FILE = 'C:\\Users\\rafael.torrado\\GIT\\PythonEnvs\\CargaAutomatica\\csv\\neverbounce\\neverbounce_cache_file.csv'
-NB_API_KEY = 'secret_081411c124998a20c9077f74fc549e4a'
+NB_API_KEY = 'secret_081411c124998a20c9077f74fc549e4a'  # Pyxis'
+#NB_API_KEY = 'secret_ab8cde56d0d8e8eb1403d311d59f12ac' # Belcorp's
 NB_EMAIL_KEY = 'email'
 NB_SLEEP_SECONDS = 0.1
 NB_SOURCE_DELIMITER = ';'
-NB_DATA_SIZE = 100
+NB_DATA_SIZE = 200
 # List of attributes that the input file must include
 NB_EMAIL_ADDRESS = 'Dirección de Email'
 NB_VALIDATION_RESULT = 'Resultado Validación'
