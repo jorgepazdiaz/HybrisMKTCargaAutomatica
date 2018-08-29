@@ -210,7 +210,8 @@ def neverbounce_validate_emails(contacts_to_validate_in_neverbounce_dict):
     for row in contacts_to_validate_in_neverbounce:
         neverbounce_contact = row[1]
         if neverbounce_contact[O_SMTP_ADDR] != '':
-            neverbounce_reg = neverbounce_contact
+            neverbounce_reg = {}
+            neverbounce_reg[O_ID] = neverbounce_contact[O_ID]
             neverbounce_reg[NB_EMAIL_KEY] = neverbounce_contact[O_SMTP_ADDR]
             neverbounce_data.append(neverbounce_reg)
     # Create sdk client
@@ -230,12 +231,6 @@ def neverbounce_validate_emails(contacts_to_validate_in_neverbounce_dict):
         job = client.jobs_create(input=partial_data, auto_parse=True, auto_start=True)
         logger.debug('job created, parsed and started: {}'.format(job))
         assert job['status'] == 'success'
-        #resp = client.jobs_parse(job['job_id'], auto_start=False)
-        #logger.debug('job parsed: {}'.format(resp))
-        #assert resp['status'] == 'success'
-        #resp = client.jobs_start(job['job_id'])
-        #logger.debug('job started: {}'.format(resp))
-        #assert resp['status'] == 'success'
         jobs_results_failed_attempts = 0
         # Busy waiting for results
         while True:
@@ -250,8 +245,9 @@ def neverbounce_validate_emails(contacts_to_validate_in_neverbounce_dict):
         logger.debug('jobs_results_failed_attempts: {}'.format(jobs_results_failed_attempts))
         for result in results:
             validation_result = result['verification']['result']
+            email = result['data'][NB_EMAIL_KEY]
             neverbounce_validation_contacts[result['data'][O_ID]][NB_VALIDATION_RESULT] = validation_result
-
+            neverbounce_validation_contacts[result['data'][O_ID]][NB_EMAIL_KEY] = email
     return neverbounce_validation_contacts
 
 
