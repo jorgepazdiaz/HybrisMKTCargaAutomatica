@@ -161,6 +161,14 @@ def write_output_file(output_file, to_write, output_file_type, discard=False):
         logger.info('{} - Lines written: {}'.format(output_file_type, write_counter))
 
 
+def transform_nb_cache_to_find(neverbounce_cache):
+    neverbounce_cache_dict = {}
+    for row in neverbounce_cache:
+        neverbounce_cache_dict[row[NB_EMAIL_ADDRESS]] = row[NB_VALIDATION_RESULT]
+
+    return neverbounce_cache_dict
+
+
 def neverbounce_cache_from_csv(input):
     logger = logging.getLogger('{}.neverbounce_cache_from_csv'.format(LOGGER_NAME))
     logger.info('Starting reading NeverBounce cache csv file...')
@@ -183,20 +191,17 @@ def neverbounce_cache_from_csv(input):
         logger.info('Cache does not exist')
         exists_neverbounce_cache = False
 
-    return exists_neverbounce_cache, neverbounce_cache
+    neverbounce_cache_dict = transform_nb_cache_to_find(neverbounce_cache)
+
+    return exists_neverbounce_cache, neverbounce_cache, neverbounce_cache_dict
 
 
-def find_in_neverbounce_cache(email_address, neverbounce_cache):
+def find_in_neverbounce_cache(email_address, neverbounce_cache_dict):
     email_exists_in_cache = False
     neverbounce_validation_result_type = ''
-    for row in neverbounce_cache:
-        #for key in NB_CACHE_FIELDS:
-        #    if key not in row.keys():
-        #        raise ValueError(MSG_INPUT_ERROR.format(key))
-        if row[NB_EMAIL_ADDRESS] == email_address:
-            email_exists_in_cache = True
-            neverbounce_validation_result_type = row[NB_VALIDATION_RESULT]
-            break
+    if email_address in neverbounce_cache_dict.keys():
+        email_exists_in_cache = True
+        neverbounce_validation_result_type = neverbounce_cache_dict[email_address]
 
     return email_exists_in_cache, neverbounce_validation_result_type
 
@@ -311,7 +316,7 @@ def generate_contacts(contacts, mode):
     contacts_copy = []
     read_counter = 0
     if mode == 'PRODUCTIVE':
-        exists_neverbounce_cache, neverbounce_cache = neverbounce_cache_from_csv(NB_CSV_CACHE_FILE)
+        exists_neverbounce_cache, neverbounce_cache, neverbounce_cache_dict = neverbounce_cache_from_csv(NB_CSV_CACHE_FILE)
     for row in contacts:
         contact = {}
         read_counter += 1
@@ -361,11 +366,11 @@ def generate_contacts(contacts, mode):
                             email_exists_in_cache = False
                             if exists_neverbounce_cache:
                                 # Find email address in NeverBounce cache
-                                email_exists_in_cache, neverbounce_validation_result = find_in_neverbounce_cache(contact[O_SMTP_ADDR], neverbounce_cache)
+                                email_exists_in_cache, neverbounce_validation_result = find_in_neverbounce_cache(contact[O_SMTP_ADDR], neverbounce_cache_dict)
                             if not email_exists_in_cache:
                                 # Add contact to NeverBounce validation dictionary
                                 contacts_copy.append(row)
-                                contacts_to_validate_in_neverbounce[contact[O_ID]] = contact
+                             #   contacts_to_validate_in_neverbounce[contact[O_ID]] = contact
                                 # contacts_to_write[contact[O_ID]] = contact
                             elif not neverbounce_validation_result in NB_VALID_RESULTS:
                                 raise ValueError(MSG_INVALID_MAIL_CACHE)
@@ -441,8 +446,7 @@ def generate_contacts(contacts, mode):
                             row[key] = str(row[key])
                         logger.error('Discarded {}: {}'.format(discarded[O_DISCARD_MOTIVE], json.dumps(row)))
                         break
-        # Quito los repetidos
-        #neverbounce_cache = list({v[NB_EMAIL_ADDRESS]:v for v in neverbounce_cache}.values())
+        # Removing reppeated
         neverbounce_cache = [dict(t) for t in {tuple(d.items()) for d in neverbounce_cache}]
         neverbounce_cache_to_csv(NB_CSV_CACHE_FILE, neverbounce_cache)
         if invalid_email:
