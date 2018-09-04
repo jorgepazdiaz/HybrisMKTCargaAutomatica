@@ -370,8 +370,7 @@ def generate_contacts(contacts, mode):
                             if not email_exists_in_cache:
                                 # Add contact to NeverBounce validation dictionary
                                 contacts_copy.append(row)
-                             #   contacts_to_validate_in_neverbounce[contact[O_ID]] = contact
-                                # contacts_to_write[contact[O_ID]] = contact
+                                contacts_to_validate_in_neverbounce[contact[O_ID]] = contact
                             elif not neverbounce_validation_result in NB_VALID_RESULTS:
                                 raise ValueError(MSG_INVALID_MAIL_CACHE)
                             else:
