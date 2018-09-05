@@ -161,20 +161,13 @@ def write_output_file(output_file, to_write, output_file_type, discard=False):
         logger.info('{} - Lines written: {}'.format(output_file_type, write_counter))
 
 
-def transform_nb_cache_to_find(neverbounce_cache):
-    neverbounce_cache_dict = {}
-    for row in neverbounce_cache:
-        neverbounce_cache_dict[row[NB_EMAIL_ADDRESS]] = row[NB_VALIDATION_RESULT]
-
-    return neverbounce_cache_dict
-
-
 def neverbounce_cache_from_csv(input):
     logger = logging.getLogger('{}.neverbounce_cache_from_csv'.format(LOGGER_NAME))
     logger.info('Starting reading NeverBounce cache csv file...')
     source_folder, source_file = os.path.split(os.path.abspath(input))
     input_file = os.path.join(source_folder, source_file)
     neverbounce_cache = []
+    neverbounce_cache_dict = {}
     try:
         with open(input_file, 'r', encoding=SOURCE_ENCODING) as ifile:
             reader = csv.DictReader(ifile, delimiter=NB_SOURCE_DELIMITER)
@@ -184,14 +177,13 @@ def neverbounce_cache_from_csv(input):
                 neverbounce_email_reg[NB_COUNTRY_ID] = line[NB_COUNTRY_ID]
                 neverbounce_email_reg[NB_EMAIL_ADDRESS] = line[NB_EMAIL_ADDRESS]
                 neverbounce_email_reg[NB_VALIDATION_RESULT] = line[NB_VALIDATION_RESULT]
+                neverbounce_cache_dict[line[NB_EMAIL_ADDRESS]] = line[NB_VALIDATION_RESULT]
                 neverbounce_cache.append(neverbounce_email_reg)
             exists_neverbounce_cache = True
             logger.info('Cache exists')
     except Exception as e:
         logger.info('Cache does not exist')
         exists_neverbounce_cache = False
-
-    neverbounce_cache_dict = transform_nb_cache_to_find(neverbounce_cache)
 
     return exists_neverbounce_cache, neverbounce_cache, neverbounce_cache_dict
 
