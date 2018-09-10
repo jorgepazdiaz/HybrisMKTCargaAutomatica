@@ -437,8 +437,8 @@ def generate_contacts(contacts, mode):
                             row[key] = str(row[key])
                         logger.error('Discarded {}: {}'.format(discarded[O_DISCARD_MOTIVE], json.dumps(row)))
                         break
-        # Removing reppeated
-        neverbounce_cache = [dict(t) for t in {tuple(d.items()) for d in neverbounce_cache}]
+        # Removing repeated
+        #neverbounce_cache = [dict(t) for t in {tuple(d.items()) for d in neverbounce_cache}]
         neverbounce_cache_to_csv(NB_CSV_CACHE_FILE, neverbounce_cache)
         if invalid_email:
             subscrtiptions = transform_nb_cache_to_subscriptions(neverbounce_cache)
