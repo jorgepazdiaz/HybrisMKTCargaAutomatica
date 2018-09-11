@@ -406,6 +406,7 @@ def generate_contacts(contacts, mode):
     if len(contacts_to_validate_in_neverbounce) > 0:
         neverbounce_validation_contacts = neverbounce_validate_emails(contacts_to_validate_in_neverbounce)
         invalid_email = False
+        appended_neverbounce_cache = []
         for neverbounce_row in neverbounce_validation_contacts.items():
             neverbounce_contact = neverbounce_row[1]
             neverbounce_email_reg = {}
@@ -415,6 +416,7 @@ def generate_contacts(contacts, mode):
             neverbounce_email_reg[NB_EMAIL_ADDRESS] = neverbounce_contact[NB_EMAIL_KEY]
             neverbounce_email_reg[NB_VALIDATION_RESULT] = neverbounce_contact[NB_VALIDATION_RESULT]
             neverbounce_cache.append(neverbounce_email_reg)
+            appended_neverbounce_cache.append(neverbounce_email_reg)
             try:
                 if not neverbounce_contact[NB_VALIDATION_RESULT] in NB_VALID_RESULTS:
                     invalid_email = True
@@ -441,7 +443,7 @@ def generate_contacts(contacts, mode):
         #neverbounce_cache = [dict(t) for t in {tuple(d.items()) for d in neverbounce_cache}]
         neverbounce_cache_to_csv(NB_CSV_CACHE_FILE, neverbounce_cache)
         if invalid_email:
-            subscrtiptions = transform_nb_cache_to_subscriptions(neverbounce_cache)
+            subscrtiptions = transform_nb_cache_to_subscriptions(appended_neverbounce_cache)
             subscriptions_to_csv(args.output, subscrtiptions)
     logger.info('Lines read: {} - To write: {} - Discarded: {}'.
                 format(read_counter, len(contacts_to_write), len(contacts_to_discard)))
