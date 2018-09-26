@@ -200,7 +200,8 @@ def find_in_neverbounce_cache(email_address, neverbounce_cache_dict):
 
 def neverbounce_validate_emails(contacts_to_validate_in_neverbounce_dict):
     logger = logging.getLogger('{}.neverbounce_validate_emails'.format(LOGGER_NAME))
-    neverbounce_validation_contacts = contacts_to_validate_in_neverbounce_dict
+    neverbounce_validation_contacts = contacts_to_validate_in_neverbounce_dict.copy()
+    neverbounce_validation_contacts_with_no_validation = contacts_to_validate_in_neverbounce_dict.copy()
     neverbounce_data = []
     contacts_to_validate_in_neverbounce = contacts_to_validate_in_neverbounce_dict.items()
     # Transforming contacts list to NeverBounce emails list
@@ -213,39 +214,60 @@ def neverbounce_validate_emails(contacts_to_validate_in_neverbounce_dict):
             neverbounce_data.append(neverbounce_reg)
     # Create sdk client
     client = neverbounce_sdk.client(api_key=NB_API_KEY)
-    max_jobs_data = int(math.ceil(len(neverbounce_data) / NB_DATA_SIZE))
-    logger.info('Total number of contacts to validate: {}. Total number of batches to be sent: {}'.format(len(neverbounce_data), max_jobs_data))
-    batch_count = 0
-    for data_number in range(max_jobs_data):
-        batch_count += 1
-        partial_data = []
-        ini_index = data_number * NB_DATA_SIZE
-        end_index = min((data_number + 1) * NB_DATA_SIZE, len(neverbounce_data))
-        for item in neverbounce_data[ini_index:end_index]:
-            partial_data.append(item)
-        # Create Job
-        logger.info('sending batch number: {}'.format(batch_count))
-        job = client.jobs_create(input=partial_data, auto_parse=True, auto_start=True)
-        logger.debug('job created, parsed and started: {}'.format(job))
-        assert job['status'] == 'success'
-        jobs_results_failed_attempts = 0
-        # Busy waiting for results
-        while True:
-            try:
-                results = client.jobs_results(job_id=job['job_id'])
-            except:
-                sleep(NB_SLEEP_SECONDS)
-                jobs_results_failed_attempts += 1
-                continue
+    info = client.account_info();
+    paid_credits_remaining = info['credits_info']['paid_credits_remaining']
+    free_credits_remaining = info['credits_info']['free_credits_remaining']
+    credits_remaining = paid_credits_remaining + free_credits_remaining
+    if credits_remaining > 0:
+        max_jobs_data = int(math.ceil(len(neverbounce_data) / NB_DATA_SIZE))
+        logger.info('Total number of contacts to validate: {}. Total number of batches to sent: {}'.format(len(neverbounce_data), max_jobs_data))
+        batch_count = 0
+        for data_number in range(max_jobs_data):
+            batch_count += 1
+            partial_data = []
+            ini_index = data_number * NB_DATA_SIZE
+            end_index = min((data_number + 1) * NB_DATA_SIZE, len(neverbounce_data))
+            amount_to_validate = end_index - ini_index
+            if credits_remaining < amount_to_validate:
+                logger.info('Not enough credits! Credits needed: {}, credits remaining: {}'.format(
+                    amount_to_validate, credits_remaining))
+                end_index = ini_index + credits_remaining
+            for item in neverbounce_data[ini_index:end_index]:
+                partial_data.append(item)
+            if credits_remaining < amount_to_validate:
+                logger.info('sending batch number with less amount of contacts because of lack of credits ({}): {}'.format(credits_remaining, batch_count))
             else:
+                logger.info(
+                    'sending batch number: {}'.format(batch_count))
+            # Create Job
+            job = client.jobs_create(input=partial_data, auto_parse=True, auto_start=True)
+            logger.debug('job created, parsed and started: {}'.format(job))
+            assert job['status'] == 'success'
+            jobs_results_failed_attempts = 0
+            # Busy waiting for results
+            while True:
+                try:
+                    results = client.jobs_results(job_id=job['job_id'])
+                except:
+                    sleep(NB_SLEEP_SECONDS)
+                    jobs_results_failed_attempts += 1
+                    continue
+                else:
+                    break
+            logger.debug('jobs_results_failed_attempts: {}'.format(jobs_results_failed_attempts))
+            for result in results:
+                validation_result = result['verification']['result']
+                email = result['data'][NB_EMAIL_KEY]
+                neverbounce_validation_contacts[result['data'][O_ID]][NB_VALIDATION_RESULT] = validation_result
+                neverbounce_validation_contacts[result['data'][O_ID]][NB_EMAIL_KEY] = email
+                neverbounce_validation_contacts_with_no_validation.pop(result['data'][O_ID])
+            info = client.account_info();
+            paid_credits_remaining = info['credits_info']['paid_credits_remaining']
+            free_credits_remaining = info['credits_info']['free_credits_remaining']
+            credits_remaining = paid_credits_remaining + free_credits_remaining
+            if credits_remaining <= 0:
                 break
-        logger.debug('jobs_results_failed_attempts: {}'.format(jobs_results_failed_attempts))
-        for result in results:
-            validation_result = result['verification']['result']
-            email = result['data'][NB_EMAIL_KEY]
-            neverbounce_validation_contacts[result['data'][O_ID]][NB_VALIDATION_RESULT] = validation_result
-            neverbounce_validation_contacts[result['data'][O_ID]][NB_EMAIL_KEY] = email
-    return neverbounce_validation_contacts
+    return neverbounce_validation_contacts, neverbounce_validation_contacts_with_no_validation
 
 
 def neverbounce_cache_to_csv(output, neverbounce_cache):
@@ -404,41 +426,48 @@ def generate_contacts(contacts, mode):
             logger.error('Discarded {}: {}'.format(discarded[O_DISCARD_MOTIVE], json.dumps(row)))
     # Processing NeverBounce validation list
     if len(contacts_to_validate_in_neverbounce) > 0:
-        neverbounce_validation_contacts = neverbounce_validate_emails(contacts_to_validate_in_neverbounce)
+        neverbounce_validation_contacts, neverbounce_validation_contacts_with_no_validation = neverbounce_validate_emails(contacts_to_validate_in_neverbounce)
+        logger.info('Number of NeverBounce validation contacts: {}. Number of contacts with no validation: {}'.format(len(neverbounce_validation_contacts), len(neverbounce_validation_contacts_with_no_validation)))
         invalid_email = False
         appended_neverbounce_cache = []
         for neverbounce_row in neverbounce_validation_contacts.items():
             neverbounce_contact = neverbounce_row[1]
-            neverbounce_email_reg = {}
-            neverbounce_email_reg[NB_CONTACT_ID] = neverbounce_contact[O_CODIGOEBELISTA]
-            code, country = str(neverbounce_contact[O_ID]).split('_', 1)
-            neverbounce_email_reg[NB_COUNTRY_ID] = country
-            neverbounce_email_reg[NB_EMAIL_ADDRESS] = neverbounce_contact[NB_EMAIL_KEY]
-            neverbounce_email_reg[NB_VALIDATION_RESULT] = neverbounce_contact[NB_VALIDATION_RESULT]
-            neverbounce_cache.append(neverbounce_email_reg)
-            appended_neverbounce_cache.append(neverbounce_email_reg)
-            try:
-                if not neverbounce_contact[NB_VALIDATION_RESULT] in NB_VALID_RESULTS:
-                    invalid_email = True
-                    raise ValueError(MSG_INVALID_MAIL_NB)
-                else:
+            if NB_EMAIL_KEY in neverbounce_contact.keys():
+                neverbounce_email_reg = {}
+                neverbounce_email_reg[NB_CONTACT_ID] = neverbounce_contact[O_CODIGOEBELISTA]
+                code, country = str(neverbounce_contact[O_ID]).split('_', 1)
+                neverbounce_email_reg[NB_COUNTRY_ID] = country
+                neverbounce_email_reg[NB_EMAIL_ADDRESS] = neverbounce_contact[NB_EMAIL_KEY]
+                neverbounce_email_reg[NB_VALIDATION_RESULT] = neverbounce_contact[NB_VALIDATION_RESULT]
+                neverbounce_cache.append(neverbounce_email_reg)
+                appended_neverbounce_cache.append(neverbounce_email_reg)
+                try:
+                    if not neverbounce_contact[NB_VALIDATION_RESULT] in NB_VALID_RESULTS:
+                        invalid_email = True
+                        raise ValueError(MSG_INVALID_MAIL_NB)
+                    else:
+                        neverbounce_contact.pop(NB_VALIDATION_RESULT)
+                        neverbounce_contact.pop(NB_EMAIL_KEY)
+                        contacts_to_write[neverbounce_contact[O_ID]] = neverbounce_contact
+                except Exception as e:
                     neverbounce_contact.pop(NB_VALIDATION_RESULT)
                     neverbounce_contact.pop(NB_EMAIL_KEY)
-                    contacts_to_write[neverbounce_contact[O_ID]] = neverbounce_contact
-            except Exception as e:
-                neverbounce_contact.pop(NB_VALIDATION_RESULT)
-                neverbounce_contact.pop(NB_EMAIL_KEY)
-                discarded = neverbounce_contact.copy()
-                discarded[O_DISCARD_MOTIVE] = e.args[0]
-                generate_empty_attributes(discarded, O_CONTACT_FIELDS)
-                contacts_to_discard[neverbounce_contact[O_ID]] = discarded
-                code, country = str(neverbounce_contact[O_ID]).split('_', 1)
-                for row in contacts_copy:
-                    if str(int(row[I_COD_EBELISTA])) == str(code) and str(row[I_COD_PAIS]) == str(country):
-                        for key in row.keys():
-                            row[key] = str(row[key])
-                        logger.error('Discarded {}: {}'.format(discarded[O_DISCARD_MOTIVE], json.dumps(row)))
-                        break
+                    discarded = neverbounce_contact.copy()
+                    discarded[O_DISCARD_MOTIVE] = e.args[0]
+                    generate_empty_attributes(discarded, O_CONTACT_FIELDS)
+                    contacts_to_discard[neverbounce_contact[O_ID]] = discarded
+                    code, country = str(neverbounce_contact[O_ID]).split('_', 1)
+                    for row in contacts_copy:
+                        if str(int(row[I_COD_EBELISTA])) == str(code) and str(row[I_COD_PAIS]) == str(country):
+                            for key in row.keys():
+                                row[key] = str(row[key])
+                            logger.error('Discarded {}: {}'.format(discarded[O_DISCARD_MOTIVE], json.dumps(row)))
+                            break
+        logger.info('Number of appended contacts in NeverBounce Caché: {}'.format(len(appended_neverbounce_cache)))
+        # Contacts with no validation (because of lack of credits) must be added to contacts_to_write
+        for neverbounce_row in neverbounce_validation_contacts_with_no_validation.items():
+            neverbounce_contact = neverbounce_row[1]
+            contacts_to_write[neverbounce_contact[O_ID]] = neverbounce_contact
         # Removing repeated
         #neverbounce_cache = [dict(t) for t in {tuple(d.items()) for d in neverbounce_cache}]
         neverbounce_cache_to_csv(NB_CSV_CACHE_FILE, neverbounce_cache)
